@@ -5,8 +5,10 @@ interface ScoreBreakdownProps {
   factors: ScoreFactors | MomentumFactors
 }
 
+type FactorWeight = { weight: number; label: string }
+
 export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
-  const longTermFactorWeights = {
+  const longTermFactorWeights: Record<keyof ScoreFactors, FactorWeight> = {
     priceVolatility: { weight: 25, label: 'Price Volatility' },
     trendConsistency: { weight: 25, label: 'Trend Consistency' },
     volumeStability: { weight: 20, label: 'Volume Stability' },
@@ -14,14 +16,14 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
     marketCapStability: { weight: 10, label: 'Market Cap Stability' }
   }
 
-  const shortTermFactorWeights = {
+  const shortTermFactorWeights: Record<keyof MomentumFactors, FactorWeight> = {
     volumeChange: { weight: 30, label: 'Volume Change' },
     priceMomentum: { weight: 30, label: 'Price Momentum' },
     breakoutDetection: { weight: 20, label: 'Breakout Detection' },
     trendAcceleration: { weight: 20, label: 'Trend Acceleration' }
   }
 
-  const factorConfig = type === 'long-term' ? longTermFactorWeights : shortTermFactorWeights
+  const factorConfig: Record<string, FactorWeight> = type === 'long-term' ? longTermFactorWeights : shortTermFactorWeights
 
   const getColorClass = (score: number) => {
     if (score >= 80) return 'bg-green-500'
