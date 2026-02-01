@@ -3,27 +3,38 @@
 import { useState } from 'react'
 import StockCard from '@/components/StockCard'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
-import { mockAllStocks } from '@/lib/mockData'
-
-const sectors = ['All', 'Banking', 'Finance', 'Diversified', 'Manufacturing', 'Telecommunications', 'Energy', 'Healthcare']
+import LoadingSkeleton from '@/components/LoadingSkeleton'
+import { filterStocks, getAvailableSectors, getMarketCapRanges } from '@/lib/stockService'
+import { InvestmentType, SortOption } from '@/lib/types'
 
 export default function StocksPage() {
   const [selectedSector, setSelectedSector] = useState('All')
-  const [selectedType, setSelectedType] = useState<'all' | 'long-term' | 'short-term'>('all')
-  const [sortBy, setSortBy] = useState<'long-term' | 'short-term'>('long-term')
+  const [selectedType, setSelectedType] = useState<InvestmentType>('all')
+  const [sortBy, setSortBy] = useState<SortOption>('long-term')
+  const [selectedMarketCapRange, setSelectedMarketCapRange] = useState('All')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const filteredStocks = mockAllStocks.filter(stock => {
-    const sectorMatch = selectedSector === 'All' || stock.sector === selectedSector
-    const typeMatch = selectedType === 'all' || 
-      (selectedType === 'long-term' && (stock.longTermScore ?? 0) >= 70) ||
-      (selectedType === 'short-term' && (stock.shortTermScore ?? 0) >= 70)
-    return sectorMatch && typeMatch
-  }).sort((a, b) => {
-    if (sortBy === 'long-term') {
-      return (b.longTermScore ?? 0) - (a.longTermScore ?? 0)
-    }
-    return (b.shortTermScore ?? 0) - (a.shortTermScore ?? 0)
+  const availableSectors = getAvailableSectors()
+  const marketCapRanges = getMarketCapRanges()
+
+  // Get market cap range values
+  const currentMarketCapRange = marketCapRanges.find(r => r.label === selectedMarketCapRange)
+
+  // Apply filters
+  const filteredStocks = filterStocks({
+    sector: selectedSector,
+    investmentType: selectedType,
+    sortBy,
+    minMarketCap: currentMarketCapRange?.min,
+    maxMarketCap: currentMarketCapRange?.max
   })
+
+  const handleFilterChange = (callback: () => void) => {
+    setIsLoading(true)
+    callback()
+    // Simulate loading state
+    setTimeout(() => setIsLoading(false), 300)
+  }
 
   return (
     <div>
@@ -35,7 +46,7 @@ export default function StocksPage() {
           
           {/* Filters */}
           <div className="bg-white p-6 rounded-lg border border-gray-200 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Sector Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -43,10 +54,10 @@ export default function StocksPage() {
                 </label>
                 <select
                   value={selectedSector}
-                  onChange={(e) => setSelectedSector(e.target.value)}
+                  onChange={(e) => handleFilterChange(() => setSelectedSector(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {sectors.map(sector => (
+                  {availableSectors.map(sector => (
                     <option key={sector} value={sector}>{sector}</option>
                   ))}
                 </select>
@@ -59,12 +70,28 @@ export default function StocksPage() {
                 </label>
                 <select
                   value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value as 'all' | 'long-term' | 'short-term')}
+                  onChange={(e) => handleFilterChange(() => setSelectedType(e.target.value as InvestmentType))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All Stocks</option>
                   <option value="long-term">Long-Term (Score ≥ 70)</option>
                   <option value="short-term">Short-Term (Score ≥ 70)</option>
+                </select>
+              </div>
+
+              {/* Market Cap Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Market Cap
+                </label>
+                <select
+                  value={selectedMarketCapRange}
+                  onChange={(e) => handleFilterChange(() => setSelectedMarketCapRange(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {marketCapRanges.map(range => (
+                    <option key={range.label} value={range.label}>{range.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -75,11 +102,13 @@ export default function StocksPage() {
                 </label>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'long-term' | 'short-term')}
+                  onChange={(e) => handleFilterChange(() => setSortBy(e.target.value as SortOption))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="long-term">Long-Term Score</option>
                   <option value="short-term">Short-Term Score</option>
+                  <option value="price">Price</option>
+                  <option value="change">Price Change</option>
                 </select>
               </div>
             </div>
@@ -90,20 +119,29 @@ export default function StocksPage() {
             Showing {filteredStocks.length} stocks
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredStocks.map((stock) => (
-              <StockCard
-                key={stock.id}
-                stock={stock}
-                type={sortBy === 'long-term' ? 'long-term' : 'short-term'}
-              />
-            ))}
-          </div>
-
-          {filteredStocks.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No stocks found matching your filters.</p>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <LoadingSkeleton type="card" count={8} />
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredStocks.map((stock) => (
+                  <StockCard
+                    key={stock.id}
+                    stock={stock}
+                    type={sortBy === 'long-term' || sortBy === 'price' || sortBy === 'change' ? 'long-term' : 'short-term'}
+                    showExplanation={false}
+                  />
+                ))}
+              </div>
+
+              {filteredStocks.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No stocks found matching your filters.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

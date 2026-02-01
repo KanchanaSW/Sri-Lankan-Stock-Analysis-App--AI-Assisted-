@@ -1,8 +1,13 @@
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import StockCard from '@/components/StockCard'
-import { mockMarketOverview, mockLongTermStocks, mockShortTermStocks } from '@/lib/mockData'
+import { mockMarketOverview } from '@/lib/mockData'
+import { getTopLongTermStocks, getTopShortTermStocks } from '@/lib/stockService'
 
 export default function Home() {
+  // Fetch top stocks using the stock service
+  const topLongTerm = getTopLongTermStocks(5)
+  const topShortTerm = getTopShortTermStocks(5)
+
   return (
     <div>
       <DisclaimerBanner />
@@ -41,8 +46,8 @@ export default function Home() {
             <p className="text-gray-600">Stable stocks with consistent performance, suitable for long-term holding</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {mockLongTermStocks.map((stock) => (
-              <StockCard key={stock.id} stock={stock} type="long-term" />
+            {topLongTerm.map((stock) => (
+              <StockCard key={stock.id} stock={stock} type="long-term" showExplanation={true} />
             ))}
           </div>
         </div>
@@ -56,8 +61,8 @@ export default function Home() {
             <p className="text-gray-600">High-momentum stocks showing strong recent performance</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {mockShortTermStocks.map((stock) => (
-              <StockCard key={stock.id} stock={stock} type="short-term" />
+            {topShortTerm.map((stock) => (
+              <StockCard key={stock.id} stock={stock} type="short-term" showExplanation={true} />
             ))}
           </div>
         </div>
