@@ -1,13 +1,33 @@
-# Yahoo Finance Stock Scraper - Setup Guide
+# Stock Scraper - Setup Guide
 
 ## Overview
 
-To scrape real stock data from Yahoo Finance, you'll need to create a scraper script that can run externally and update your Convex database.
+This guide covers setting up an automated stock price scraper that updates your Convex database with **real-time CSE stock data** from [TradingView](https://www.tradingview.com/symbols/CSELK-JKH.N0000/).
+
+## ✅ Data Source: TradingView
+
+The scraper uses **TradingView's Scanner API** to fetch real Colombo Stock Exchange (CSE) data:
+- Exchange: `CSELK` (Colombo Stock Exchange)
+- Symbol format: `JKH.N0000` (e.g., [JKH on TradingView](https://www.tradingview.com/symbols/CSELK-JKH.N0000/))
+
+### Currently Supported Stocks:
+| Symbol | Company | TradingView Symbol |
+|--------|---------|-------------------|
+| JKH | John Keells Holdings | JKH.N0000 |
+| COMB | Commercial Bank | COMB.N0000 |
+| NDB | National Development Bank | NDB.N0000 |
+| DIAL | Dialog Axiata | DIAL.N0000 |
+| LOLC | LOLC Holdings | LOLC.N0000 |
+| SAMP | Sampath Bank | SAMP.N0000 |
+| CTC | Ceylon Tobacco | CTC.N0000 |
+| LIOC | Lanka IOC | LIOC.N0000 |
+| HNB | Hatton National Bank | HNB.N0000 |
+| TOK | Tokyo Cement | TKYO.N0000 |
 
 ## Why External Script?
 
 Convex actions have limitations with the `fetch()` API and circular dependencies when trying to reference other Convex functions. The best approach is to create an external Node.js script that:
-1. Fetches data from Yahoo Finance
+1. Fetches data from TradingView's Scanner API
 2. Updates Convex database directly using the Convex client
 
 ## Setup Instructions

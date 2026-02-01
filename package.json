@@ -9,10 +9,11 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "npx convex run seed:seedDatabase",
-    "scrape": "tsx scripts/scrapeYahooFinance.ts"
+    "scrape": "tsx scripts/scrapeTradingView.ts"
   },
   "dependencies": {
     "convex": "^1.31.7",
+    "dotenv": "^17.2.3",
     "next": "^14.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
