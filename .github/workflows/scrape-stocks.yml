@@ -1,0 +1,37 @@
+name: Scrape Stock Data
+
+on:
+  # Run daily at 3:00 PM Sri Lanka time (9:30 AM UTC)
+  # CSE market closes at 2:30 PM, so this runs 30 minutes after close
+  schedule:
+    - cron: '30 9 * * 1-5'  # Monday to Friday only
+
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🚀 Run stock scraper
+        run: npm run scrape
+        env:
+          CONVEX_URL: ${{ secrets.CONVEX_URL }}
+
+      - name: 📊 Log completion
+        run: |
+          echo "✅ Stock scraping completed at $(date)"
+          echo "🕐 Sri Lanka time: $(TZ='Asia/Colombo' date)"

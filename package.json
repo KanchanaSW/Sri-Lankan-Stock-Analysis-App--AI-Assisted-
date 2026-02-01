@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "npx convex run seed:seedDatabase"
+    "seed": "npx convex run seed:seedDatabase",
+    "scrape": "tsx scripts/scrapeYahooFinance.ts"
   },
   "dependencies": {
     "convex": "^1.31.7",
@@ -26,6 +27,7 @@
     "eslint-config-next": "^14.2.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.0"
   }
 }

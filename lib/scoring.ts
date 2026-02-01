@@ -1,5 +1,20 @@
-import { StockData, OHLCData, ScoreFactors, MomentumFactors, StockScores } from './types'
-import { getSectorData } from './mockData'
+import { StockData, OHLCData, ScoreFactors, MomentumFactors, StockScores, SectorData } from './types'
+
+// Sector performance lookup (can be updated with real data)
+const sectorPerformance: Record<string, number> = {
+  'Banking': 5.2,
+  'Finance': 4.8,
+  'Diversified': 6.1,
+  'Manufacturing': 3.5,
+  'Telecommunications': 2.1,
+  'Energy': 8.3,
+  'Healthcare': 4.2,
+  'Consumer Goods': 3.8,
+}
+
+function getSectorPerformance(sectorName: string): number {
+  return sectorPerformance[sectorName] ?? 3.0 // Default neutral performance
+}
 
 // ==================== UTILITY FUNCTIONS ====================
 
@@ -98,12 +113,11 @@ function calculateVolumeStability(data: OHLCData[]): number {
 }
 
 function calculateSectorStrength(sectorName: string): number {
-  const sectorData = getSectorData(sectorName)
-  if (!sectorData) return 50 // Default neutral score
+  const performance = getSectorPerformance(sectorName)
   
   // Convert sector performance to score
   // Performance ranges from -5% to +10%
-  return normalizeToScore(sectorData.averagePerformance, -5, 10, false)
+  return normalizeToScore(performance, -5, 10, false)
 }
 
 function calculateMarketCapStability(data: OHLCData[], currentMarketCap: number): number {

@@ -170,6 +170,88 @@ export const createStock = mutation({
 });
 
 /**
+ * Batch update multiple stocks at once (for scraper efficiency)
+ */
+export const batchUpdateStocks = mutation({
+  args: {
+    updates: v.array(
+      v.object({
+        stockId: v.id("stocks"),
+        currentPrice: v.optional(v.number()),
+        priceChange: v.optional(v.number()),
+        weekHigh52: v.optional(v.number()),
+        weekLow52: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    for (const update of args.updates) {
+      const { stockId, ...fields } = update;
+      const filteredFields = Object.fromEntries(
+        Object.entries(fields).filter(([_, v]) => v !== undefined)
+      );
+      
+      await ctx.db.patch(stockId, {
+        ...filteredFields,
+        updatedAt: now,
+      });
+    }
+    
+    return { updated: args.updates.length };
+  },
+});
+
+/**
+ * Batch insert/update OHLC data (for historical data sync)
+ */
+export const batchAddOHLCData = mutation({
+  args: {
+    stockId: v.id("stocks"),
+    data: v.array(
+      v.object({
+        date: v.string(),
+        open: v.number(),
+        high: v.number(),
+        low: v.number(),
+        close: v.number(),
+        volume: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    let insertedCount = 0;
+    let updatedCount = 0;
+    
+    for (const ohlc of args.data) {
+      // Check if data for this date already exists
+      const existing = await ctx.db
+        .query("ohlcData")
+        .withIndex("by_stock_date", (q) =>
+          q.eq("stockId", args.stockId).eq("date", ohlc.date)
+        )
+        .first();
+      
+      if (existing) {
+        // Update existing record
+        await ctx.db.patch(existing._id, ohlc);
+        updatedCount++;
+      } else {
+        // Insert new record
+        await ctx.db.insert("ohlcData", {
+          stockId: args.stockId,
+          ...ohlc,
+        });
+        insertedCount++;
+      }
+    }
+    
+    return { inserted: insertedCount, updated: updatedCount };
+  },
+});
+
+/**
  * Delete all data (for testing/reset purposes)
  */
 export const clearAllData = mutation({
