@@ -1,92 +1,191 @@
-# 🇱🇰 Sri Lankan Stock Analysis App (AI-Assisted)
+# 🇱🇰 Sri Lankan Stock Analysis App
 
 A web-based platform that analyzes Colombo Stock Exchange (CSE) data and presents AI-assisted insights for long-term investing and short-term trading opportunities.
 
-## Features
+**🌐 Live Demo:** [slstocks.netlify.app](https://slstocks.netlify.app)
 
-- **Market Overview**: Real-time summary of market statistics
+## ✨ Features
+
+- **Real-Time Stock Data**: Live prices from TradingView's CSE feed
+- **Market Overview**: Summary of market statistics and trends
 - **Long-Term Analysis**: Identify stable stocks suitable for long-term holding
 - **Short-Term Opportunities**: Find high-momentum stocks for active trading
 - **AI-Assisted Insights**: Plain-English explanations of stock classifications
-- **Interactive Charts**: Historical price and volume visualization
-- **Advanced Filtering**: Filter stocks by sector, investment type, and score
+- **Interactive Charts**: Historical price and volume visualization (Recharts)
+- **Advanced Filtering**: Filter stocks by sector, investment type, and market cap
+- **Automated Updates**: Daily price updates via GitHub Actions
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Charts**: Recharts
-- **Data Layer**: Mock data (Convex integration ready)
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Next.js 14 (App Router), React 18, TypeScript |
+| **Styling** | Tailwind CSS |
+| **Backend** | Convex (Real-time database) |
+| **Charts** | Recharts |
+| **Data Source** | TradingView Scanner API |
+| **Hosting** | Netlify |
+| **Automation** | GitHub Actions (Daily scraper) |
 
-## Getting Started
+## 📊 Tracked Stocks
+
+| Symbol | Company | Sector |
+|--------|---------|--------|
+| JKH | John Keells Holdings PLC | Diversified |
+| COMB | Commercial Bank of Ceylon PLC | Banking |
+| NDB | National Development Bank PLC | Banking |
+| DIAL | Dialog Axiata PLC | Telecommunications |
+| LOLC | LOLC Holdings PLC | Finance |
+| SAMP | Sampath Bank PLC | Banking |
+| CTC | Ceylon Tobacco Company PLC | Manufacturing |
+| LIOC | Lanka IOC PLC | Energy |
+| HNB | Hatton National Bank PLC | Banking |
+| TOK | Tokyo Cement Company PLC | Manufacturing |
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm, pnpm, yarn, or bun
+- Node.js 20+
+- npm or yarn
+- Convex account ([convex.dev](https://convex.dev))
 
 ### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/KanchanaSW/Sri-Lankan-Stock-Analysis-App--AI-Assisted-.git
+cd "Sri Lankan Stock Analysis App (AI-Assisted)"
+
 # Install dependencies
 npm install
 
-# Run development server
+# Set up Convex
+npx convex dev
+```
+
+### Environment Variables
+
+Create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_CONVEX_URL=your-convex-deployment-url
+CONVEX_URL=your-convex-deployment-url
+```
+
+### Development
+
+```bash
+# Terminal 1: Start Convex backend
+npm run dev:convex
+
+# Terminal 2: Start Next.js frontend
 npm run dev
+
+# Seed the database (first time only)
+npm run seed
+
+# Fetch latest stock prices
+npm run scrape
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Build for Production
+### Production Build
 
 ```bash
 npm run build
 npm start
 ```
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 ├── app/
-│   ├── globals.css          # Global styles and Tailwind
-│   ├── layout.tsx           # Root layout with header
-│   ├── page.tsx             # Home page
+│   ├── ConvexClientProvider.tsx  # Convex React provider
+│   ├── globals.css               # Global styles & Tailwind
+│   ├── layout.tsx                # Root layout with header
+│   ├── page.tsx                  # Home page
 │   └── stocks/
-│       ├── page.tsx         # Stock list with filters
-│       └── [id]/page.tsx    # Stock detail page
+│       ├── page.tsx              # Stock list with filters
+│       └── [id]/page.tsx         # Stock detail page
 ├── components/
-│   ├── Header.tsx           # Navigation header
-│   ├── DisclaimerBanner.tsx # Legal disclaimer
-│   └── StockCard.tsx        # Stock display card
-└── lib/
-    └── mockData.ts          # Mock stock data
+│   ├── charts/
+│   │   ├── PriceChart.tsx        # Historical price chart
+│   │   └── VolumeChart.tsx       # Trading volume chart
+│   ├── DisclaimerBanner.tsx      # Legal disclaimer
+│   ├── Header.tsx                # Navigation header
+│   ├── LoadingSkeleton.tsx       # Loading states
+│   ├── RiskIndicator.tsx         # Risk level display
+│   ├── ScoreBadge.tsx            # Score visualization
+│   ├── ScoreBreakdown.tsx        # Detailed score factors
+│   └── StockCard.tsx             # Stock display card
+├── convex/
+│   ├── mutations.ts              # Database mutations
+│   ├── queries.ts                # Database queries
+│   ├── schema.ts                 # Database schema
+│   ├── seed.ts                   # Seed data script
+│   └── stocks.ts                 # Stock-specific queries
+├── lib/
+│   ├── config.ts                 # App configuration
+│   ├── convexService.ts          # Convex React hooks
+│   ├── explanations.ts           # AI explanation generator
+│   ├── scoring.ts                # Stock scoring algorithms
+│   ├── stockService.ts           # Utility functions
+│   ├── stockSymbols.ts           # CSE stock mappings
+│   └── types.ts                  # TypeScript types
+├── scripts/
+│   └── scrapeTradingView.ts      # TradingView price scraper
+├── .github/workflows/
+│   └── scrape-stocks.yml         # Automated daily scraper
+├── netlify.toml                  # Netlify configuration
+└── package.json
 ```
 
-## Pages
+## 📈 Scoring System
 
-### Home Page
-- Market overview statistics
-- Top 5 long-term stock picks
-- Top 5 short-term opportunities
-- Mandatory disclaimer banner
+### Long-Term Stability Score (0-100)
+Evaluates stocks for buy-and-hold investing based on:
+- Price Volatility (25%)
+- Trend Consistency (25%)
+- Volume Stability (20%)
+- Sector Strength (20%)
+- Market Cap Stability (10%)
 
-### Stock List Page
-- Filterable list of all stocks
-- Filter by sector and investment type
-- Sort by long-term or short-term scores
+### Short-Term Momentum Score (0-100)
+Identifies trading opportunities based on:
+- Volume Change (30%)
+- Price Momentum (30%)
+- Breakout Detection (20%)
+- Trend Acceleration (20%)
 
-### Stock Detail Page
-- Comprehensive stock information
-- Long-term and short-term scores
-- AI-generated analysis
-- Risk level indicator
-- Historical price and volume charts
+## 🔄 Automated Price Updates
 
-## Compliance
+The scraper runs automatically via GitHub Actions:
+- **Schedule**: Daily at 3:00 PM Sri Lanka time (weekdays)
+- **Source**: TradingView Scanner API
+- **Manual trigger**: `npm run scrape`
 
-⚠️ **Disclaimer**: This platform provides stock market analysis for educational purposes only and does not constitute financial or investment advice. Always consult with a qualified financial advisor before making investment decisions.
+## 🚀 Deployment
 
-## License
+### Netlify (Frontend)
+
+1. Connect your GitHub repository to Netlify
+2. Set environment variable: `NEXT_PUBLIC_CONVEX_URL`
+3. Deploy automatically on push
+
+### GitHub Actions (Scraper)
+
+Add repository secret: `CONVEX_URL`
+
+## ⚠️ Disclaimer
+
+This platform provides stock market analysis for **educational purposes only** and does not constitute financial or investment advice. Always consult with a qualified financial advisor before making investment decisions.
+
+## 📄 License
 
 This project is for educational and portfolio purposes.
+
+---
+
+Built with ❤️ for the Sri Lankan investment community
