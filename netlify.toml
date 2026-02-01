@@ -1,19 +1,14 @@
 # Netlify configuration for Next.js + Convex app
 
 [build]
-  # Build command
   command = "npm run build"
-  # Output directory for Next.js
-  publish = ".next"
+  # Don't set publish - Next.js Runtime handles this automatically
 
-# Next.js plugin for Netlify (handles SSR, API routes, etc.)
+# Next.js plugin for Netlify (handles SSR, routing, etc.)
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Environment variables (set these in Netlify dashboard)
-# NEXT_PUBLIC_CONVEX_URL = "your-convex-url"
-
-# Headers for security and caching
+# Headers for security
 [[headers]]
   for = "/*"
   [headers.values]
@@ -26,10 +21,3 @@
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# Redirects for SPA routing (fallback)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"]}
