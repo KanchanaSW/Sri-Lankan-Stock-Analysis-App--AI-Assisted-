@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import RiskIndicator from '@/components/RiskIndicator'
 import ScoreBreakdown from '@/components/ScoreBreakdown'
@@ -12,6 +12,7 @@ import { formatMarketCap } from '@/lib/stockService'
 
 export default function StockDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const id = params.id as string;
   const { stock, isLoading } = useStockById(id);
 
@@ -62,6 +63,22 @@ export default function StockDetailPage() {
       
       <section className="py-12">
         <div className="container-custom">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="mb-6 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+          >
+            <svg 
+              className="w-5 h-5 transition-transform group-hover:-translate-x-1" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">Back</span>
+          </button>
+
           {/* Stock Header */}
           <div className="mb-8">
             <div className="flex items-start justify-between mb-4">

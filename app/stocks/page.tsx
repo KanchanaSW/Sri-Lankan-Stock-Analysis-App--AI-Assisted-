@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import StockCard from '@/components/StockCard'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import LoadingSkeleton from '@/components/LoadingSkeleton'
@@ -13,6 +14,7 @@ import { getMarketCapRanges } from '@/lib/stockService'
 import { InvestmentType, SortOption } from '@/lib/types'
 
 export default function StocksPage() {
+  const router = useRouter()
   const [selectedSector, setSelectedSector] = useState('All')
   const [selectedType, setSelectedType] = useState<InvestmentType>('all')
   const [sortBy, setSortBy] = useState<SortOption>('long-term')
@@ -40,6 +42,22 @@ export default function StocksPage() {
       
       <section className="py-12">
         <div className="container-custom">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="mb-6 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+          >
+            <svg 
+              className="w-5 h-5 transition-transform group-hover:-translate-x-1" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">Back</span>
+          </button>
+
           <h1 className="mb-8">All Stocks</h1>
           
           {/* Filters */}
