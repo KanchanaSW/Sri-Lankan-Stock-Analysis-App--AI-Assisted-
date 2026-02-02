@@ -2,6 +2,77 @@ import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
+// Helper function to generate realistic OHLC data based on current price
+function generateHistoricalData(
+  basePrice: number,
+  days: number = 90,
+  volatility: number = 0.02,
+  trend: number = 0.0002
+): Array<{
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}> {
+  const data: Array<{
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }> = [];
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  // Start price lower so trend leads to current price
+  let currentPrice = basePrice * 0.9;
+
+  for (let i = 0; i < days; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
+
+    // Skip weekends
+    if (date.getDay() === 0 || date.getDay() === 6) {
+      continue;
+    }
+
+    // Use a seeded random for reproducibility
+    const seedRandom = () => {
+      const x = Math.sin(i * 12.9898 + basePrice * 78.233) * 43758.5453;
+      return x - Math.floor(x);
+    };
+
+    // Add trend and random walk
+    const trendChange = trend * currentPrice;
+    const randomChange = (seedRandom() - 0.5) * volatility * currentPrice;
+    currentPrice = currentPrice + trendChange + randomChange;
+
+    // Generate OHLC
+    const dailyVolatility = volatility * currentPrice * 0.5;
+    const open = currentPrice + (seedRandom() - 0.5) * dailyVolatility;
+    const close = currentPrice + (seedRandom() - 0.5) * dailyVolatility;
+    const high = Math.max(open, close) + seedRandom() * dailyVolatility * 0.5;
+    const low = Math.min(open, close) - seedRandom() * dailyVolatility * 0.5;
+    const volume = Math.floor(
+      (500000 + seedRandom() * 1000000) * (1 + seedRandom() * 0.5)
+    );
+
+    data.push({
+      date: date.toISOString().split("T")[0],
+      open: Math.max(0.01, open),
+      high: Math.max(0.01, high),
+      low: Math.max(0.01, low),
+      close: Math.max(0.01, close),
+      volume,
+    });
+  }
+
+  return data;
+}
+
 /**
  * Update a stock's current price and price change
  */
@@ -286,6 +357,7 @@ export const clearAllData = mutation({
 /**
  * Replace all stocks with a new list (for dynamic stock discovery)
  * Atomically clears existing stocks and inserts new ones
+ * Also generates synthetic historical data for charts
  */
 export const replaceAllStocks = mutation({
   args: {
@@ -323,7 +395,7 @@ export const replaceAllStocks = mutation({
       await ctx.db.delete(stock._id);
     }
     
-    // Step 2: Insert new stocks
+    // Step 2: Insert new stocks with historical data
     const insertedIds: Id<"stocks">[] = [];
     
     for (const stock of args.stocks) {
@@ -333,6 +405,27 @@ export const replaceAllStocks = mutation({
         updatedAt: now,
       });
       insertedIds.push(id);
+      
+      // Generate and insert historical OHLC data for this stock
+      // Use price change to estimate volatility: higher change = higher volatility
+      const volatility = Math.min(0.05, Math.max(0.01, Math.abs(stock.priceChange) / 100 + 0.015));
+      // Use price change sign to determine trend direction
+      const trend = stock.priceChange >= 0 ? 0.0003 : -0.0001;
+      
+      const historicalData = generateHistoricalData(
+        stock.currentPrice,
+        90, // 90 days of data
+        volatility,
+        trend
+      );
+      
+      // Insert OHLC data for this stock
+      for (const ohlc of historicalData) {
+        await ctx.db.insert("ohlcData", {
+          stockId: id,
+          ...ohlc,
+        });
+      }
     }
     
     return { 
