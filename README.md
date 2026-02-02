@@ -6,6 +6,7 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 
 ## ✨ Features
 
+- **Dynamic Stock Discovery**: Automatically fetches the top 50 most active stocks from TradingView
 - **Real-Time Stock Data**: Live prices from TradingView's CSE feed
 - **Market Overview**: Summary of market statistics and trends
 - **Long-Term Analysis**: Identify stable stocks suitable for long-term holding
@@ -13,7 +14,7 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 - **AI-Assisted Insights**: Plain-English explanations of stock classifications
 - **Interactive Charts**: Historical price and volume visualization (Recharts)
 - **Advanced Filtering**: Filter stocks by sector, investment type, and market cap
-- **Automated Updates**: Daily price updates via GitHub Actions
+- **Automated Updates**: Daily stock list and price updates via GitHub Actions
 
 ## 🛠️ Tech Stack
 
@@ -29,18 +30,19 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 
 ## 📊 Tracked Stocks
 
-| Symbol | Company | Sector |
-|--------|---------|--------|
-| JKH | John Keells Holdings PLC | Diversified |
-| COMB | Commercial Bank of Ceylon PLC | Banking |
-| NDB | National Development Bank PLC | Banking |
-| DIAL | Dialog Axiata PLC | Telecommunications |
-| LOLC | LOLC Holdings PLC | Finance |
-| SAMP | Sampath Bank PLC | Banking |
-| CTC | Ceylon Tobacco Company PLC | Manufacturing |
-| LIOC | Lanka IOC PLC | Energy |
-| HNB | Hatton National Bank PLC | Banking |
-| TOK | Tokyo Cement Company PLC | Manufacturing |
+The app automatically tracks the **top 50 most actively traded stocks** on the Colombo Stock Exchange (CSE). The stock list is dynamically updated based on trading volume, ensuring you always see the most relevant and liquid stocks.
+
+**Stock Selection Criteria:**
+- ✅ Highest trading volume (most active)
+- ✅ Real-time data from TradingView
+- ✅ Automatically refreshed daily
+- ✅ Includes metadata: sector, market cap, 52-week high/low
+
+**Classification by AI Scoring:**
+- **Long-Term Picks**: Stocks with stability score ≥ 70
+- **Short-Term Picks**: Stocks with momentum score ≥ 70
+
+The stock list refreshes automatically via the daily scraper, so the app adapts to market trends and trading activity.
 
 ## 🚀 Getting Started
 
@@ -132,10 +134,10 @@ npm start
 │   ├── explanations.ts           # AI explanation generator
 │   ├── scoring.ts                # Stock scoring algorithms
 │   ├── stockService.ts           # Utility functions
-│   ├── stockSymbols.ts           # CSE stock mappings
+│   ├── stockSymbols.ts           # Symbol format utilities
 │   └── types.ts                  # TypeScript types
 ├── scripts/
-│   └── scrapeTradingView.ts      # TradingView price scraper
+│   └── scrapeTradingView.ts      # Dynamic stock discovery + price scraper
 ├── .github/workflows/
 │   └── scrape-stocks.yml         # Automated daily scraper
 ├── netlify.toml                  # Netlify configuration
@@ -159,12 +161,19 @@ Identifies trading opportunities based on:
 - Breakout Detection (20%)
 - Trend Acceleration (20%)
 
-## 🔄 Automated Price Updates
+## 🔄 Automated Stock Discovery & Updates
 
 The scraper runs automatically via GitHub Actions:
 - **Schedule**: Daily at 3:00 PM Sri Lanka time (weekdays)
+- **Process**: 
+  1. Discovers top 50 most active stocks from TradingView
+  2. Fetches current prices, 52-week high/low, sector data
+  3. Replaces entire stock database with fresh data
+  4. App automatically classifies stocks by scoring algorithms
 - **Source**: TradingView Scanner API
 - **Manual trigger**: `npm run scrape`
+
+This ensures the app always shows the most actively traded and relevant stocks, adapting to market trends automatically.
 
 ## 🚀 Deployment
 

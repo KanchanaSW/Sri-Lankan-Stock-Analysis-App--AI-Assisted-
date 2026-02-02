@@ -282,3 +282,110 @@ export const clearAllData = mutation({
     }
   },
 });
+
+/**
+ * Replace all stocks with a new list (for dynamic stock discovery)
+ * Atomically clears existing stocks and inserts new ones
+ */
+export const replaceAllStocks = mutation({
+  args: {
+    stocks: v.array(
+      v.object({
+        symbol: v.string(),
+        name: v.string(),
+        sector: v.string(),
+        marketCap: v.number(),
+        currentPrice: v.number(),
+        priceChange: v.number(),
+        weekHigh52: v.number(),
+        weekLow52: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Step 1: Delete all existing stocks and their OHLC data
+    const existingStocks = await ctx.db.query("stocks").collect();
+    
+    for (const stock of existingStocks) {
+      // Delete all OHLC data for this stock
+      const ohlcData = await ctx.db
+        .query("ohlcData")
+        .withIndex("by_stock", (q) => q.eq("stockId", stock._id))
+        .collect();
+      
+      for (const data of ohlcData) {
+        await ctx.db.delete(data._id);
+      }
+      
+      // Delete the stock
+      await ctx.db.delete(stock._id);
+    }
+    
+    // Step 2: Insert new stocks
+    const insertedIds: Id<"stocks">[] = [];
+    
+    for (const stock of args.stocks) {
+      const id = await ctx.db.insert("stocks", {
+        ...stock,
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertedIds.push(id);
+    }
+    
+    return { 
+      deleted: existingStocks.length, 
+      inserted: insertedIds.length,
+      stockIds: insertedIds
+    };
+  },
+});
+
+/**
+ * Upsert a stock (insert or update by symbol)
+ */
+export const upsertStock = mutation({
+  args: {
+    symbol: v.string(),
+    name: v.string(),
+    sector: v.string(),
+    marketCap: v.number(),
+    currentPrice: v.number(),
+    priceChange: v.number(),
+    weekHigh52: v.number(),
+    weekLow52: v.number(),
+  },
+  handler: async (ctx, args): Promise<Id<"stocks">> => {
+    const now = Date.now();
+    
+    // Check if stock exists
+    const existing = await ctx.db
+      .query("stocks")
+      .withIndex("by_symbol", (q) => q.eq("symbol", args.symbol))
+      .first();
+    
+    if (existing) {
+      // Update existing stock
+      await ctx.db.patch(existing._id, {
+        name: args.name,
+        sector: args.sector,
+        marketCap: args.marketCap,
+        currentPrice: args.currentPrice,
+        priceChange: args.priceChange,
+        weekHigh52: args.weekHigh52,
+        weekLow52: args.weekLow52,
+        updatedAt: now,
+      });
+      return existing._id;
+    } else {
+      // Insert new stock
+      return await ctx.db.insert("stocks", {
+        ...args,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  },
+});

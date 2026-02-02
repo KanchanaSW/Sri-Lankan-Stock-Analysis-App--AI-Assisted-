@@ -1,7 +1,6 @@
 import { config } from "dotenv";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
-import { CSE_STOCK_SYMBOLS } from "../lib/stockSymbols";
 
 // Load environment variables from .env.local
 config({ path: ".env.local" });
@@ -38,6 +37,101 @@ interface StockPriceData {
   high52Week: number;
   low52Week: number;
   volume: number;
+}
+
+interface DiscoveredStock {
+  symbol: string;
+  tradingView: string;
+  name: string;
+  sector: string;
+  marketCap: number;
+  currentPrice: number;
+  priceChange: number;
+  volume: number;
+}
+
+/**
+ * Discovers the most active stocks from TradingView's scan API
+ * Returns top 50 most actively traded stocks with metadata
+ */
+async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
+  const discovered: DiscoveredStock[] = [];
+  
+  // TradingView scan API endpoint for Sri Lanka
+  const url = "https://scanner.tradingview.com/srilanka/scan";
+  
+  // Build the request payload to get top 50 most active stocks
+  const payload = {
+    filter: [
+      { left: "volume", operation: "greater", right: 0 },
+      { left: "type", operation: "in_range", right: ["stock", "dr"] }
+    ],
+    options: { lang: "en" },
+    markets: ["srilanka"],
+    symbols: { query: { types: [] }, tickers: [] },
+    columns: [
+      "name",                    // Company name
+      "close",                   // Current price
+      "change",                  // Price change percentage
+      "volume",                  // Trading volume
+      "sector",                  // Sector
+      "market_cap_basic",        // Market cap
+      "price_52_week_high",      // 52-week high
+      "price_52_week_low"        // 52-week low
+    ],
+    sort: { 
+      sortBy: "volume", 
+      sortOrder: "desc" 
+    },
+    range: [0, 50]  // Top 50 most active
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.error(`TradingView discovery API error: ${response.status}`);
+      return discovered;
+    }
+
+    const data: TradingViewResponse = await response.json();
+    
+    for (const quote of data.data) {
+      // Extract symbol from "CSELK:JKH.N0000" format
+      const fullSymbol = quote.s.split(":")[1];
+      if (!fullSymbol) continue;
+      
+      const [name, close, change, volume, sector, marketCap, high52, low52] = quote.d;
+      
+      // Validate required fields
+      if (typeof close === "number" && close > 0 && typeof name === "string") {
+        // Extract local symbol (remove .N0000 suffix)
+        const localSymbol = fullSymbol.replace(".N0000", "");
+        
+        discovered.push({
+          symbol: localSymbol,
+          tradingView: fullSymbol,
+          name: name || `${localSymbol} Stock`,
+          sector: typeof sector === "string" ? sector : "Unknown",
+          marketCap: typeof marketCap === "number" ? marketCap / 1_000_000 : 0, // Convert to millions
+          currentPrice: close,
+          priceChange: typeof change === "number" ? change : 0,
+          volume: typeof volume === "number" ? volume : 0,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error discovering stocks from TradingView:", error);
+  }
+
+  return discovered;
 }
 
 /**
@@ -114,79 +208,103 @@ async function updateAllPrices() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`📅 ${new Date().toLocaleString("en-LK", { timeZone: "Asia/Colombo" })}`);
   console.log(`🔗 Convex: ${CONVEX_URL?.substring(0, 40)}...`);
-  console.log(`📊 Stocks to update: ${CSE_STOCK_SYMBOLS.length}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  // Fetch all stock data from TradingView in one request
-  console.log("📡 Fetching data from TradingView...\n");
-  const tradingViewSymbols = CSE_STOCK_SYMBOLS.map(s => s.tradingView);
-  const priceData = await fetchTradingViewData(tradingViewSymbols);
+  // STEP 1: Discover most active stocks from TradingView
+  console.log("🔍 Discovering most active stocks from TradingView...\n");
+  const discoveredStocks = await discoverActiveStocks();
   
-  if (priceData.size === 0) {
-    console.error("❌ Failed to fetch data from TradingView");
+  if (discoveredStocks.length === 0) {
+    console.error("❌ Failed to discover any stocks from TradingView");
     process.exit(1);
   }
   
-  console.log(`✅ Received data for ${priceData.size} stocks\n`);
+  console.log(`✅ Discovered ${discoveredStocks.length} active stocks\n`);
 
-  let successCount = 0;
-  let failCount = 0;
+  // STEP 2: Fetch detailed price data for all discovered stocks
+  console.log("📡 Fetching detailed price data from TradingView...\n");
+  const tradingViewSymbols = discoveredStocks.map(s => s.tradingView);
+  const priceData = await fetchTradingViewData(tradingViewSymbols);
+  
+  if (priceData.size === 0) {
+    console.error("❌ Failed to fetch price data from TradingView");
+    process.exit(1);
+  }
+  
+  console.log(`✅ Received price data for ${priceData.size} stocks\n`);
 
-  for (const { local, tradingView, name } of CSE_STOCK_SYMBOLS) {
-    try {
-      process.stdout.write(`📈 ${local.padEnd(6)} ${name.substring(0, 28).padEnd(30)}... `);
+  // STEP 3: Prepare stock data for database replacement
+  console.log("🗄️  Preparing stock data for database...\n");
+  const stocksToInsert = discoveredStocks.map(stock => {
+    const priceInfo = priceData.get(stock.tradingView);
+    
+    return {
+      symbol: stock.symbol,
+      name: stock.name,
+      sector: stock.sector,
+      marketCap: stock.marketCap,
+      currentPrice: priceInfo?.price ?? stock.currentPrice,
+      priceChange: priceInfo?.changePercent ?? stock.priceChange,
+      weekHigh52: priceInfo?.high52Week ?? stock.currentPrice * 1.1,
+      weekLow52: priceInfo?.low52Week ?? stock.currentPrice * 0.9,
+    };
+  });
 
-      // Get price data from TradingView response
-      const quote = priceData.get(tradingView);
-      
-      if (!quote) {
-        console.log("⚠️  No TradingView data");
-        failCount++;
-        continue;
-      }
-
-      // Get current stock from Convex
-      const stock = await client.query(api.stocks.getStockBySymbol, {
-        symbol: local,
-      });
-
-      if (!stock) {
-        console.log("⚠️  Not in DB");
-        failCount++;
-        continue;
-      }
-
-      // Update in Convex
-      await client.mutation(api.mutations.updateStock, {
-        stockId: stock._id,
-        currentPrice: quote.price,
-        priceChange: quote.changePercent,
-        weekHigh52: quote.high52Week,
-        weekLow52: quote.low52Week,
-      });
-
-      const changeStr = quote.changePercent >= 0 
-        ? `+${quote.changePercent.toFixed(2)}%` 
-        : `${quote.changePercent.toFixed(2)}%`;
-      const changeIcon = quote.changePercent >= 0 ? "🟢" : "🔴";
-      console.log(`✅ Rs. ${quote.price.toFixed(2).padStart(8)} ${changeIcon} ${changeStr}`);
-      successCount++;
-
-    } catch (error) {
-      console.log(`❌ Error: ${error instanceof Error ? error.message : String(error)}`);
-      failCount++;
-    }
+  // STEP 4: Replace all stocks in database atomically
+  console.log("🔄 Replacing stocks in database...\n");
+  try {
+    const result = await client.mutation(api.mutations.replaceAllStocks, {
+      stocks: stocksToInsert,
+    });
+    
+    console.log(`✅ Database updated: ${result.deleted} deleted, ${result.inserted} inserted\n`);
+  } catch (error) {
+    console.error("❌ Failed to update database:", error);
+    process.exit(1);
   }
 
+  // STEP 5: Display summary
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("📊 Summary");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`✅ Success: ${successCount}/${CSE_STOCK_SYMBOLS.length}`);
-  console.log(`❌ Failed:  ${failCount}/${CSE_STOCK_SYMBOLS.length}`);
-  console.log(`⏱️  Completed at: ${new Date().toLocaleString("en-LK", { timeZone: "Asia/Colombo" })}`);
+  
+  // Count stocks by sector
+  const sectorCounts = discoveredStocks.reduce((acc, stock) => {
+    acc[stock.sector] = (acc[stock.sector] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  console.log(`✅ Total stocks: ${discoveredStocks.length}`);
+  console.log(`📈 Sectors represented: ${Object.keys(sectorCounts).length}`);
+  
+  // Show top 5 sectors
+  const topSectors = Object.entries(sectorCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+  
+  console.log("\n🏆 Top sectors:");
+  for (const [sector, count] of topSectors) {
+    console.log(`   ${sector}: ${count} stocks`);
+  }
+  
+  // Show top 5 by volume
+  const topByVolume = discoveredStocks
+    .sort((a, b) => b.volume - a.volume)
+    .slice(0, 5);
+  
+  console.log("\n📊 Most active stocks:");
+  for (const stock of topByVolume) {
+    const changeStr = stock.priceChange >= 0 
+      ? `+${stock.priceChange.toFixed(2)}%` 
+      : `${stock.priceChange.toFixed(2)}%`;
+    const changeIcon = stock.priceChange >= 0 ? "🟢" : "🔴";
+    console.log(`   ${stock.symbol.padEnd(8)} Rs. ${stock.currentPrice.toFixed(2).padStart(8)} ${changeIcon} ${changeStr}`);
+  }
+  
+  console.log(`\n⏱️  Completed at: ${new Date().toLocaleString("en-LK", { timeZone: "Asia/Colombo" })}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  process.exit(failCount > 0 && successCount === 0 ? 1 : 0);
+  process.exit(0);
 }
 
 updateAllPrices();
