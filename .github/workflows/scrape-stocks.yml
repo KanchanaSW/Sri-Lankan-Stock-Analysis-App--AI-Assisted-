@@ -1,10 +1,12 @@
 name: Scrape Stock Data
 
 on:
-  # Run daily at 3:00 PM Sri Lanka time (9:30 AM UTC)
-  # CSE market closes at 2:30 PM, so this runs 30 minutes after close
+  # Run at 10:00 AM and 3:00 PM Sri Lanka time (UTC+5:30)
+  # 10:00 AM SL = 4:30 AM UTC
+  # 3:00 PM SL = 9:30 AM UTC (30 min after market close at 2:30 PM)
   schedule:
-    - cron: '30 9 * * 1-5'  # Monday to Friday only
+    - cron: '30 4 * * 1-5'   # 10:00 AM Sri Lanka time (Monday-Friday)
+    - cron: '30 9 * * 1-5'   # 3:00 PM Sri Lanka time (Monday-Friday)
 
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
