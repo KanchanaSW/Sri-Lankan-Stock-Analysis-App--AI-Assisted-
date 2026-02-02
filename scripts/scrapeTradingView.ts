@@ -51,8 +51,8 @@ interface DiscoveredStock {
 }
 
 /**
- * Discovers the most active stocks from TradingView's scan API
- * Returns top 50 most actively traded stocks with metadata
+ * Discovers stocks with highest net income from TradingView's scan API
+ * Returns top 50 most profitable stocks with metadata
  */
 async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
   const discovered: DiscoveredStock[] = [];
@@ -60,7 +60,7 @@ async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
   // TradingView scan API endpoint for Sri Lanka
   const url = "https://scanner.tradingview.com/srilanka/scan";
   
-  // Build the request payload to get top 50 most active stocks
+  // Build the request payload to get top 50 stocks by net income
   const payload = {
     filter: [
       { left: "volume", operation: "greater", right: 0 },
@@ -73,6 +73,7 @@ async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
       "name",                    // Company name
       "close",                   // Current price
       "change",                  // Price change percentage
+      "net_income",              // Net income (profitability)
       "volume",                  // Trading volume
       "sector",                  // Sector
       "market_cap_basic",        // Market cap
@@ -80,10 +81,10 @@ async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
       "price_52_week_low"        // 52-week low
     ],
     sort: { 
-      sortBy: "volume", 
+      sortBy: "net_income",      // Sort by net income
       sortOrder: "desc" 
     },
-    range: [0, 50]  // Top 50 most active
+    range: [0, 50]  // Top 50 most profitable
   };
 
   try {
@@ -108,7 +109,7 @@ async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
       const fullSymbol = quote.s.split(":")[1];
       if (!fullSymbol) continue;
       
-      const [name, close, change, volume, sector, marketCap, high52, low52] = quote.d;
+      const [name, close, change, netIncome, volume, sector, marketCap, high52, low52] = quote.d;
       
       // Validate required fields
       if (typeof close === "number" && close > 0 && typeof name === "string") {
@@ -210,8 +211,8 @@ async function updateAllPrices() {
   console.log(`🔗 Convex: ${CONVEX_URL?.substring(0, 40)}...`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  // STEP 1: Discover most active stocks from TradingView
-  console.log("🔍 Discovering most active stocks from TradingView...\n");
+  // STEP 1: Discover stocks with highest net income from TradingView
+  console.log("🔍 Discovering most profitable stocks (highest net income) from TradingView...\n");
   const discoveredStocks = await discoverActiveStocks();
   
   if (discoveredStocks.length === 0) {
@@ -219,7 +220,7 @@ async function updateAllPrices() {
     process.exit(1);
   }
   
-  console.log(`✅ Discovered ${discoveredStocks.length} active stocks\n`);
+  console.log(`✅ Discovered ${discoveredStocks.length} most profitable stocks\n`);
 
   // STEP 2: Fetch detailed price data for all discovered stocks
   console.log("📡 Fetching detailed price data from TradingView...\n");
@@ -292,7 +293,7 @@ async function updateAllPrices() {
     .sort((a, b) => b.volume - a.volume)
     .slice(0, 5);
   
-  console.log("\n📊 Most active stocks:");
+  console.log("\n📊 Top 5 by trading volume:");
   for (const stock of topByVolume) {
     const changeStr = stock.priceChange >= 0 
       ? `+${stock.priceChange.toFixed(2)}%` 

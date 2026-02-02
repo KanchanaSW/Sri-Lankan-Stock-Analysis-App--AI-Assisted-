@@ -6,7 +6,7 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 
 ## ✨ Features
 
-- **Dynamic Stock Discovery**: Automatically fetches the top 50 most active stocks from TradingView
+- **Dynamic Stock Discovery**: Automatically fetches the top 50 most profitable stocks (highest net income) from TradingView
 - **Real-Time Stock Data**: Live prices from TradingView's CSE feed
 - **Market Overview**: Summary of market statistics and trends
 - **Long-Term Analysis**: Identify stable stocks suitable for long-term holding
@@ -30,10 +30,10 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 
 ## 📊 Tracked Stocks
 
-The app automatically tracks the **top 50 most actively traded stocks** on the Colombo Stock Exchange (CSE). The stock list is dynamically updated based on trading volume, ensuring you always see the most relevant and liquid stocks.
+The app automatically tracks the **top 50 most profitable stocks** (by net income) on the Colombo Stock Exchange (CSE). The stock list is dynamically updated based on net income, ensuring you always see financially strong companies with proven profitability.
 
 **Stock Selection Criteria:**
-- ✅ Highest trading volume (most active)
+- ✅ Highest net income (most profitable companies)
 - ✅ Real-time data from TradingView
 - ✅ Automatically refreshed daily
 - ✅ Includes metadata: sector, market cap, 52-week high/low
@@ -42,7 +42,7 @@ The app automatically tracks the **top 50 most actively traded stocks** on the C
 - **Long-Term Picks**: Stocks with stability score ≥ 70
 - **Short-Term Picks**: Stocks with momentum score ≥ 70
 
-The stock list refreshes automatically via the daily scraper, so the app adapts to market trends and trading activity.
+The stock list refreshes automatically via the daily scraper, focusing on companies that demonstrate strong financial performance and real profitability - the foundation of sustainable investing.
 
 ## 🚀 Getting Started
 
@@ -166,14 +166,14 @@ Identifies trading opportunities based on:
 The scraper runs automatically via GitHub Actions:
 - **Schedule**: Daily at 3:00 PM Sri Lanka time (weekdays)
 - **Process**: 
-  1. Discovers top 50 most active stocks from TradingView
+  1. Discovers top 50 most profitable stocks from TradingView (by net income)
   2. Fetches current prices, 52-week high/low, sector data
   3. Replaces entire stock database with fresh data
   4. App automatically classifies stocks by scoring algorithms
 - **Source**: TradingView Scanner API
 - **Manual trigger**: `npm run scrape`
 
-This ensures the app always shows the most actively traded and relevant stocks, adapting to market trends automatically.
+This ensures the app always shows the most financially sound companies with strong profitability, providing a solid foundation for investment decisions.
 
 ## 🚀 Deployment
 

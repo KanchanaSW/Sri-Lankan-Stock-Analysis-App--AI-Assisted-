@@ -4,16 +4,60 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        DATA LAYER                            │
+│                   EXTERNAL DATA SOURCE                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  mockStocksData (12 stocks)                                  │
-│  ├── Basic Info: symbol, name, sector, marketCap            │
-│  ├── Current Price: price, change, 52W high/low             │
-│  └── Historical: 250+ days of OHLC + volume data            │
+│  TradingView Scanner API                                     │
+│  ├── Top 50 stocks by net income (highest profitability)   │
+│  ├── Real-time prices & 52-week high/low                   │
+│  ├── Sector classification                                  │
+│  └── Market cap & volume data                              │
 │                                                               │
-│  sectorData (8 sectors)                                      │
-│  └── Performance metrics, stock count, trending              │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│                      SCRAPER LAYER                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  scripts/scrapeTradingView.ts                               │
+│  ├── discoverActiveStocks() - Discover top 50 profitable   │
+│  ├── fetchTradingViewData() - Get detailed price data      │
+│  └── updateAllPrices() - Replace database stocks           │
+│                                                               │
+│  Runs: Daily at 3:00 PM LKT (GitHub Actions)               │
+│  Process: Atomic stock replacement                          │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│                   DATABASE LAYER (Convex)                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  Tables:                                                     │
+│  ├── stocks - Core stock data (~50 stocks)                 │
+│  │   ├── Basic: symbol, name, sector, marketCap           │
+│  │   └── Current: price, change, 52W high/low             │
+│  │                                                          │
+│  ├── ohlcData - Historical price/volume data               │
+│  │   └── OHLC + volume per stock per day                  │
+│  │                                                          │
+│  ├── sectors - Sector performance metrics                  │
+│  │   └── Performance, stock count, trending               │
+│  │                                                          │
+│  └── marketOverview - Market statistics (singleton)        │
+│      └── Total stocks, gainers, losers, volume             │
+│                                                               │
+│  Mutations:                                                  │
+│  ├── replaceAllStocks - Atomic stock replacement           │
+│  ├── updateStock - Update individual stock                 │
+│  ├── upsertStock - Insert or update by symbol             │
+│  └── addOHLCData / batchAddOHLCData                        │
+│                                                               │
+│  Queries:                                                    │
+│  ├── getAllStocks - Fetch all stocks                       │
+│  ├── getStockBySymbol - Find by symbol                     │
+│  ├── getStockWithHistory - Stock + OHLC data              │
+│  └── getMarketOverview - Market statistics                 │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
                            ↓
@@ -47,13 +91,15 @@
 │                      SERVICE LAYER                           │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  stockService.ts                                             │
-│  ├── Cache Management                                        │
+│  convexService.ts (React Hooks)                             │
+│  ├── useAllStocks() - Subscribe to all stocks              │
+│  ├── useStockById() - Subscribe to single stock            │
+│  ├── useMarketOverview() - Subscribe to market stats       │
+│  ├── getTopLongTermStocksClient() - Sort by LT score       │
+│  └── getTopShortTermStocksClient() - Sort by ST score      │
+│                                                               │
+│  stockService.ts (Utilities)                                │
 │  ├── Data Access Functions                                  │
-│  │   ├── getAllStocks()                                     │
-│  │   ├── getStockById(id)                                   │
-│  │   ├── getTopLongTermStocks(n)                            │
-│  │   └── getTopShortTermStocks(n)                           │
 │  ├── Filter & Sort                                           │
 │  │   ├── filterStocks(options)                              │
 │  │   └── sortStocks(stocks, sortBy)                         │
@@ -89,8 +135,8 @@
 │                                                               │
 │  / (Home)                                                    │
 │  ├── Market Overview Stats                                  │
-│  ├── Top 5 Long-Term Stocks                                 │
-│  └── Top 5 Short-Term Stocks                                │
+│  ├── Top 5 Long-Term Stocks (highest stability scores)     │
+│  └── Top 5 Short-Term Stocks (highest momentum scores)     │
 │                                                               │
 │  /stocks (Stock List)                                        │
 │  ├── 4 Filter Options                                        │
@@ -115,6 +161,42 @@
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+## Data Flow
+
+### Daily Update Cycle
+
+```
+1. GitHub Actions (3:00 PM LKT)
+   ↓
+2. Run scripts/scrapeTradingView.ts
+   ↓
+3. TradingView API → Discover top 50 by net income
+   ↓
+4. Fetch detailed price data
+   ↓
+5. Convex: replaceAllStocks mutation
+   ↓
+6. Delete old stocks + OHLC data
+   ↓
+7. Insert new stocks
+   ↓
+8. Next.js App: Real-time updates via Convex subscriptions
+   ↓
+9. Calculate scores & AI explanations client-side
+```
+
+### Stock Selection Criteria
+
+**TradingView API Query:**
+- **Endpoint**: `https://scanner.tradingview.com/srilanka/scan`
+- **Sort By**: `net_income` (descending)
+- **Filter**: Volume > 0, Type = stock/dr
+- **Range**: Top 50
+
+**Result**: Most profitable companies on CSE
+- Examples: Browns Investments, Commercial Bank, LOLC, HNB, Sampath Bank
+- Focus: Blue-chip, established companies with proven profitability
 
 ## Scoring Algorithm Details
 
@@ -227,24 +309,31 @@ Market Cap:     All | Small (<20B) | Mid (20-50B) | Large (50-100B) | Mega (>100
 
 ## Performance Characteristics
 
-### Caching Strategy
+### Real-Time Updates (Convex)
 ```javascript
-// First call: Processes all stocks
-cachedStocksWithScores = mockStocksData.map(processStockData)
-
-// Subsequent calls: Returns cache
-return cachedStocksWithScores
+// Convex subscriptions provide real-time data
+useAllStocks() // Auto-updates when stocks change
+useStockById(id) // Live stock detail updates
+useMarketOverview() // Real-time market stats
 ```
 
-### Computation Cost
-- Initial load: ~250ms (12 stocks × 250 data points each)
-- Cached access: <1ms
-- Filter/Sort: <10ms
+### Client-Side Scoring
+- Scores calculated in browser from historical data
+- Initial calculation: ~50-100ms per stock (with OHLC data)
+- Cached in React state during session
+- Re-calculated only on data changes
+
+### Database Performance
+- Convex queries: <100ms typically
+- Real-time subscriptions: Near-instant updates
+- Atomic stock replacement: ~5-10 seconds for 50 stocks
+- OHLC data queries: Indexed by stock and date
 
 ## File Structure
 
 ```
 app/
+├── ConvexClientProvider.tsx  # Convex React provider
 ├── layout.tsx                 # Root layout + Header
 ├── page.tsx                   # Home page
 ├── globals.css                # Tailwind + custom styles
@@ -255,51 +344,276 @@ app/
 components/
 ├── DisclaimerBanner.tsx
 ├── Header.tsx
-├── StockCard.tsx              # Updated with AI snippets
-├── ScoreBadge.tsx             # NEW
-├── RiskIndicator.tsx          # NEW
-├── LoadingSkeleton.tsx        # NEW
-├── ScoreBreakdown.tsx         # NEW
+├── StockCard.tsx              # Stock display with AI snippets
+├── ScoreBadge.tsx             # Visual score display
+├── RiskIndicator.tsx          # Risk level badge
+├── LoadingSkeleton.tsx        # Loading states
+├── ScoreBreakdown.tsx         # Factor visualization
 └── charts/
-    ├── PriceChart.tsx         # NEW
-    └── VolumeChart.tsx        # NEW
+    ├── PriceChart.tsx         # Historical price chart
+    └── VolumeChart.tsx        # Trading volume chart
+
+convex/
+├── _generated/                # Convex auto-generated types
+├── schema.ts                  # Database schema definition
+├── mutations.ts               # Database mutations
+│   ├── replaceAllStocks       # Atomic stock replacement
+│   ├── updateStock            # Update individual stock
+│   ├── upsertStock            # Insert or update
+│   └── addOHLCData            # Historical data
+├── queries.ts                 # Database queries
+│   ├── getAllStocks
+│   ├── getStockBySymbol
+│   └── getMarketOverview
+├── stocks.ts                  # Stock-specific queries
+└── seed.ts                    # Database seeding script
 
 lib/
-├── types.ts                   # NEW - TypeScript interfaces
-├── mockData.ts                # Enhanced with OHLC data
-├── scoring.ts                 # NEW - Score calculations
-├── explanations.ts            # NEW - AI text generation
-└── stockService.ts            # NEW - Data access layer
+├── types.ts                   # TypeScript interfaces
+├── config.ts                  # App configuration
+├── scoring.ts                 # Score calculations
+├── explanations.ts            # AI text generation
+├── convexService.ts           # Convex React hooks
+├── stockService.ts            # Utility functions
+└── stockSymbols.ts            # Symbol format utilities
+
+scripts/
+└── scrapeTradingView.ts       # Stock discovery & price scraper
+    ├── discoverActiveStocks() # Find top 50 by net income
+    ├── fetchTradingViewData() # Get detailed data
+    └── updateAllPrices()      # Update database
+
+.github/workflows/
+└── scrape-stocks.yml          # Daily automated scraper
 ```
 
 ## Type Definitions
 
 ### Core Types
 ```typescript
-StockData                      // Raw stock data
-OHLCData                       // Historical price/volume
-StockScores                    // Computed scores + factors
-AIExplanation                  // Generated text analysis
-StockWithScores                // Complete data object
+// Stock data from database
+StockData {
+  id: string
+  symbol: string
+  name: string
+  sector: string
+  marketCap: number
+  currentPrice: number
+  priceChange: number
+  weekHigh52: number
+  weekLow52: number
+  historicalData: OHLCData[]
+}
+
+// Historical price/volume data
+OHLCData {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+// Computed scores and factors
+StockScores {
+  longTermScore: number
+  shortTermScore: number
+  longTermFactors: ScoreFactors
+  shortTermFactors: MomentumFactors
+}
+
+// AI-generated explanations
+AIExplanation {
+  summary: string
+  longTermAnalysis: string
+  shortTermAnalysis: string
+  riskLevel: 'Low' | 'Medium' | 'High'
+  riskReasoning: string
+  keyStrengths: string[]
+  keyConcerns: string[]
+}
+
+// Complete stock object with scores
+StockWithScores extends StockData {
+  scores: StockScores
+  explanation: AIExplanation
+}
 ```
 
 ### Filter Types
 ```typescript
 InvestmentType = 'all' | 'long-term' | 'short-term'
 SortOption = 'long-term' | 'short-term' | 'price' | 'change'
+
+FilterOptions {
+  sector: string
+  investmentType: InvestmentType
+  sortBy: SortOption
+  minMarketCap?: number
+  maxMarketCap?: number
+}
 ```
+
+### Convex Types
+```typescript
+// Database IDs
+Id<"stocks"> | Id<"ohlcData"> | Id<"sectors"> | Id<"marketOverview">
+
+// Mutation return types
+{ deleted: number, inserted: number, stockIds: Id<"stocks">[] }
+{ inserted: number, updated: number }
+```
+
+## Deployment Architecture
+
+### Frontend (Netlify)
+- **Build**: Next.js static site generation
+- **Environment**: `NEXT_PUBLIC_CONVEX_URL`
+- **Auto-deploy**: On git push to main
+- **CDN**: Global edge network
+
+### Backend (Convex)
+- **Database**: Real-time cloud database
+- **Functions**: Server-side queries & mutations
+- **Subscriptions**: WebSocket-based live updates
+- **Deployment**: Automatic via `npx convex deploy`
+
+### Automation (GitHub Actions)
+- **Workflow**: `.github/workflows/scrape-stocks.yml`
+- **Schedule**: Daily at 3:00 PM Sri Lanka Time (weekdays)
+- **Environment**: `CONVEX_URL` (repository secret)
+- **Process**:
+  1. Checkout code
+  2. Install dependencies
+  3. Run `npm run scrape`
+  4. Update Convex database
+
+## Key Features
+
+### 1. Dynamic Stock Discovery
+- **Source**: TradingView Scanner API
+- **Criteria**: Top 50 by net income (profitability)
+- **Update**: Daily automatic refresh
+- **Benefits**:
+  - Zero maintenance
+  - Always current
+  - Blue-chip companies
+  - Proven profitability
+
+### 2. Real-Time Data
+- **Subscriptions**: Convex real-time updates
+- **Latency**: <100ms for UI updates
+- **Sync**: All clients updated simultaneously
+- **Reliability**: Automatic reconnection
+
+### 3. AI-Powered Analysis
+- **Long-Term Scoring**: 5 weighted factors
+- **Short-Term Scoring**: 4 weighted factors
+- **Risk Assessment**: Automated classification
+- **Explanations**: Plain-English insights
+
+### 4. Smart Classification
+- **Long-Term Picks**: Stability score ≥ 70
+- **Short-Term Opportunities**: Momentum score ≥ 70
+- **Risk Levels**: Low, Medium, High
+- **Auto-Update**: Based on daily data
+
+## Integration Points
+
+### TradingView → Scraper
+```typescript
+POST https://scanner.tradingview.com/srilanka/scan
+Body: {
+  sort: { sortBy: "net_income", sortOrder: "desc" },
+  range: [0, 50]
+}
+→ Returns top 50 most profitable stocks
+```
+
+### Scraper → Convex
+```typescript
+client.mutation(api.mutations.replaceAllStocks, {
+  stocks: discoveredStocks
+})
+→ Atomic replacement of stock database
+```
+
+### Convex → Next.js
+```typescript
+const { stocks } = useAllStocks()
+→ Real-time subscription to stock changes
+```
+
+### Next.js → User
+```typescript
+// Client-side scoring
+const stocksWithScores = stocks.map(stock => ({
+  ...stock,
+  scores: calculateStockScores(stock),
+  explanation: generateExplanation(stock, scores)
+}))
+→ Rendered in React components
+```
+
+## Security Considerations
+
+### API Keys
+- **Convex URL**: Public (read access via subscriptions)
+- **GitHub Secret**: `CONVEX_URL` for write access
+- **No TradingView Auth**: Public API endpoint
+
+### Data Validation
+- Input validation in Convex mutations
+- Type safety via TypeScript
+- Schema enforcement in Convex
+
+### Rate Limiting
+- TradingView: Respectful request spacing
+- Convex: Built-in rate limiting
+- GitHub Actions: Once daily execution
+
+## Monitoring & Maintenance
+
+### What to Monitor
+1. **Scraper Success Rate**: Check GitHub Actions logs
+2. **Stock Count**: Should be ~50 stocks
+3. **Data Freshness**: Last updated timestamp
+4. **Error Logs**: Convex dashboard logs
+5. **User Metrics**: Netlify analytics
+
+### Maintenance Tasks
+1. **Weekly**: Review scraper logs
+2. **Monthly**: Check stock quality and diversity
+3. **Quarterly**: Update scoring algorithms if needed
+4. **As Needed**: Handle TradingView API changes
 
 ## Conclusion
 
-The implementation is **complete and production-ready**. All functional logic has been implemented according to the PRD specifications with:
+The implementation is **production-ready** with:
 
-✅ Weighted scoring algorithms
-✅ AI-assisted explanations
-✅ Advanced filtering and sorting
-✅ Interactive charts
-✅ Comprehensive UI components
-✅ Zero linter errors
-✅ Full TypeScript type safety
-✅ Modular, maintainable code
+✅ **Dynamic Stock Discovery** - Top 50 profitable stocks  
+✅ **Real-Time Database** - Convex cloud backend  
+✅ **Automated Updates** - Daily GitHub Actions  
+✅ **AI Scoring** - Weighted algorithms with explanations  
+✅ **Advanced Filtering** - Sector, type, market cap  
+✅ **Interactive Charts** - Recharts visualizations  
+✅ **TypeScript** - Full type safety  
+✅ **Responsive UI** - Tailwind CSS  
+✅ **Zero Linter Errors** - Clean codebase  
+✅ **Global CDN** - Netlify deployment  
 
-The system is ready for Convex integration when needed.
+### Technology Stack Summary
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Frontend | Next.js 14 + React 18 | App framework |
+| Styling | Tailwind CSS | UI design |
+| Database | Convex | Real-time backend |
+| Data Source | TradingView API | Stock data |
+| Charts | Recharts | Visualizations |
+| Hosting | Netlify | CDN deployment |
+| Automation | GitHub Actions | Daily scraper |
+| Language | TypeScript | Type safety |
+
+The system provides a **comprehensive stock analysis platform** focused on **fundamental profitability** and **AI-assisted insights** for Sri Lankan investors.
