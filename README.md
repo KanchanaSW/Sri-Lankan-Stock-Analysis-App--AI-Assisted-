@@ -71,6 +71,7 @@ npx convex dev
 
 Create a `.env.local` file:
 
+
 ```env
 NEXT_PUBLIC_CONVEX_URL=your-convex-deployment-url
 CONVEX_URL=your-convex-deployment-url
