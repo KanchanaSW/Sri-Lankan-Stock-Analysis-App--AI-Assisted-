@@ -1,6 +1,9 @@
 import { config } from "dotenv";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
+import { calculateStockScores } from "../lib/scoring";
+import { batchGenerateExplanations } from "../lib/grokService";
+import { StockData } from "../lib/types";
 
 // Load environment variables from .env.local
 config({ path: ".env.local" });
@@ -251,17 +254,119 @@ async function updateAllPrices() {
     };
   });
 
-  // STEP 4: Replace all stocks in database atomically
-  console.log("🔄 Replacing stocks in database...\n");
+  // STEP 4: Calculate scores and identify Long-Term Picks
+  console.log("📊 Calculating scores for stocks...\n");
+  
+  // First, we need to insert stocks to get historical data generated
+  // Then we'll update with AI explanations
+  console.log("🔄 Initial database insertion...\n");
+  let insertResult;
   try {
-    const result = await client.mutation(api.mutations.replaceAllStocks, {
+    insertResult = await client.mutation(api.mutations.replaceAllStocks, {
       stocks: stocksToInsert,
     });
     
-    console.log(`✅ Database updated: ${result.deleted} deleted, ${result.inserted} inserted\n`);
+    console.log(`✅ Initial insert: ${insertResult.deleted} deleted, ${insertResult.inserted} inserted\n`);
   } catch (error) {
-    console.error("❌ Failed to update database:", error);
+    console.error("❌ Failed to insert stocks:", error);
     process.exit(1);
+  }
+
+  // STEP 5: Fetch stocks with historical data to calculate scores
+  console.log("📈 Fetching stocks with historical data for score calculation...\n");
+  
+  let allStocks;
+  try {
+    allStocks = await client.query(api.stocks.getAllStocks);
+  } catch (error) {
+    console.error("❌ Failed to fetch stocks:", error);
+    process.exit(1);
+  }
+
+  // Convert to StockData format and calculate scores
+  const stocksWithScores = allStocks.map((stock: any, index: number) => {
+    const stockData: StockData = {
+      id: (index + 1).toString(),
+      symbol: stock.symbol,
+      name: stock.name,
+      sector: stock.sector,
+      marketCap: stock.marketCap,
+      currentPrice: stock.currentPrice,
+      priceChange: stock.priceChange,
+      weekHigh52: stock.weekHigh52,
+      weekLow52: stock.weekLow52,
+      historicalData: stock.historicalData.map((ohlc: any) => ({
+        date: ohlc.date,
+        open: ohlc.open,
+        high: ohlc.high,
+        low: ohlc.low,
+        close: ohlc.close,
+        volume: ohlc.volume,
+      })),
+    };
+
+    const scores = calculateStockScores(stockData);
+    return { stock: stockData, scores, convexId: stock._id };
+  });
+
+  // Get Top 5 Long-Term Picks by score (same as shown on home page)
+  const top5LongTermPicks = [...stocksWithScores]
+    .sort((a, b) => b.scores.longTermScore - a.scores.longTermScore)
+    .slice(0, 5);
+
+  console.log(`🎯 Top 5 Long-Term Picks (for AI analysis):`);
+  top5LongTermPicks.forEach(({ stock, scores }, i) => {
+    console.log(`   ${i + 1}. ${stock.symbol} - Score: ${scores.longTermScore}`);
+  });
+  console.log('');
+
+  if (top5LongTermPicks.length > 0) {
+    // STEP 6: Generate AI explanations for Top 5 Long-Term Picks only
+    const aiExplanations = await batchGenerateExplanations(
+      top5LongTermPicks.map(({ stock, scores }) => ({ stock, scores })),
+      process.env.GROQ_API_KEY
+    );
+
+    // STEP 7: Update stocks with AI explanations
+    if (aiExplanations.size > 0) {
+      console.log(`💾 Storing ${aiExplanations.size} AI explanations in database...\n`);
+      
+      for (const { stock, convexId } of top5LongTermPicks) {
+        const explanation = aiExplanations.get(stock.symbol);
+        
+        if (explanation && convexId) {
+          try {
+            await client.mutation(api.mutations.updateStock, {
+              stockId: convexId,
+            });
+            
+            // Now patch with AI explanation using upsertStock
+            await client.mutation(api.mutations.upsertStock, {
+              symbol: stock.symbol,
+              name: stock.name,
+              sector: stock.sector,
+              marketCap: stock.marketCap,
+              currentPrice: stock.currentPrice,
+              priceChange: stock.priceChange,
+              weekHigh52: stock.weekHigh52,
+              weekLow52: stock.weekLow52,
+              aiExplanation: {
+                ...explanation,
+                generatedAt: explanation.generatedAt || Date.now(),
+              },
+            });
+            
+            console.log(`   ✅ Saved AI explanation for ${stock.symbol}`);
+          } catch (error) {
+            console.error(`   ❌ Failed to save AI explanation for ${stock.symbol}:`, error);
+          }
+        }
+      }
+      
+      console.log(`\n✅ AI explanations stored successfully\n`);
+    }
+  } else {
+    console.log("ℹ️  No stocks found, skipping AI generation\n");
   }
 
   // STEP 5: Display summary

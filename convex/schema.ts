@@ -14,6 +14,16 @@ export default defineSchema({
     weekLow52: v.number(),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
+    aiExplanation: v.optional(v.object({
+      summary: v.string(),
+      longTermAnalysis: v.string(),
+      shortTermAnalysis: v.string(),
+      riskLevel: v.union(v.literal("Low"), v.literal("Medium"), v.literal("High")),
+      riskReasoning: v.string(),
+      keyStrengths: v.array(v.string()),
+      keyConcerns: v.array(v.string()),
+      generatedAt: v.number(),
+    })),
   })
     .index("by_symbol", ["symbol"])
     .index("by_sector", ["sector"]),

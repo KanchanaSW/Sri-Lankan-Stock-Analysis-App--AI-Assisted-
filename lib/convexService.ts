@@ -11,6 +11,16 @@ import { Doc, Id } from "../convex/_generated/dataModel";
 // Type for Convex stock with OHLC data
 type ConvexStock = Doc<"stocks"> & {
   historicalData: Doc<"ohlcData">[];
+  aiExplanation?: {
+    summary: string;
+    longTermAnalysis: string;
+    shortTermAnalysis: string;
+    riskLevel: 'Low' | 'Medium' | 'High';
+    riskReasoning: string;
+    keyStrengths: string[];
+    keyConcerns: string[];
+    generatedAt: number;
+  };
 };
 
 /**
@@ -40,10 +50,15 @@ function transformConvexStock(stock: ConvexStock, index: number): StockData {
 
 /**
  * Process stock data to add scores and explanations
+ * Uses stored AI explanation if available, otherwise falls back to template
  */
-function processStockData(stock: StockData): StockWithScores {
+function processStockData(stock: StockData, convexStock?: ConvexStock): StockWithScores {
   const scores = calculateStockScores(stock);
-  const explanation = generateAIExplanation(scores);
+  
+  // Use stored AI explanation if available, otherwise generate from template
+  const explanation = convexStock?.aiExplanation 
+    ? convexStock.aiExplanation 
+    : generateAIExplanation(scores);
   
   return {
     ...stock,
@@ -70,9 +85,10 @@ export function useAllStocks(): {
     (a, b) => (a._creationTime ?? 0) - (b._creationTime ?? 0)
   );
   
-  const stocks = sortedStocks.map((stock, index) => 
-    processStockData(transformConvexStock(stock as ConvexStock, index))
-  );
+  const stocks = sortedStocks.map((stock, index) => {
+    const convexStock = stock as ConvexStock;
+    return processStockData(transformConvexStock(convexStock, index), convexStock);
+  });
   
   return { stocks, isLoading: false };
 }
@@ -95,7 +111,8 @@ export function useStockById(legacyId: string): {
   }
   
   const index = parseInt(legacyId, 10) - 1;
-  const stock = processStockData(transformConvexStock(stockData as ConvexStock, index));
+  const convexStock = stockData as ConvexStock;
+  const stock = processStockData(transformConvexStock(convexStock, index), convexStock);
   
   return { stock, isLoading: false };
 }
