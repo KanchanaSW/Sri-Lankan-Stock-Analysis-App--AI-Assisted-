@@ -232,3 +232,4 @@ This project is for educational and portfolio purposes.
 ---
 
 Built with ❤️ for the Sri Lankan investment community
+
