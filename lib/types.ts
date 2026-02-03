@@ -59,6 +59,7 @@ export interface AIExplanation {
   riskReasoning: string
   keyStrengths: string[]
   keyConcerns: string[]
+  generatedAt?: number  // Timestamp when AI explanation was generated (only for Grok-powered explanations)
 }
 
 export interface StockWithScores extends StockData {

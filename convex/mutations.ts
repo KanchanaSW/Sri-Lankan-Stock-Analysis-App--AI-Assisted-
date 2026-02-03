@@ -371,6 +371,16 @@ export const replaceAllStocks = mutation({
         priceChange: v.number(),
         weekHigh52: v.number(),
         weekLow52: v.number(),
+        aiExplanation: v.optional(v.object({
+          summary: v.string(),
+          longTermAnalysis: v.string(),
+          shortTermAnalysis: v.string(),
+          riskLevel: v.union(v.literal("Low"), v.literal("Medium"), v.literal("High")),
+          riskReasoning: v.string(),
+          keyStrengths: v.array(v.string()),
+          keyConcerns: v.array(v.string()),
+          generatedAt: v.number(),
+        })),
       })
     ),
   },
@@ -449,6 +459,16 @@ export const upsertStock = mutation({
     priceChange: v.number(),
     weekHigh52: v.number(),
     weekLow52: v.number(),
+    aiExplanation: v.optional(v.object({
+      summary: v.string(),
+      longTermAnalysis: v.string(),
+      shortTermAnalysis: v.string(),
+      riskLevel: v.union(v.literal("Low"), v.literal("Medium"), v.literal("High")),
+      riskReasoning: v.string(),
+      keyStrengths: v.array(v.string()),
+      keyConcerns: v.array(v.string()),
+      generatedAt: v.number(),
+    })),
   },
   handler: async (ctx, args): Promise<Id<"stocks">> => {
     const now = Date.now();
@@ -461,7 +481,7 @@ export const upsertStock = mutation({
     
     if (existing) {
       // Update existing stock
-      await ctx.db.patch(existing._id, {
+      const updateData: any = {
         name: args.name,
         sector: args.sector,
         marketCap: args.marketCap,
@@ -470,7 +490,14 @@ export const upsertStock = mutation({
         weekHigh52: args.weekHigh52,
         weekLow52: args.weekLow52,
         updatedAt: now,
-      });
+      };
+      
+      // Include aiExplanation if provided
+      if (args.aiExplanation) {
+        updateData.aiExplanation = args.aiExplanation;
+      }
+      
+      await ctx.db.patch(existing._id, updateData);
       return existing._id;
     } else {
       // Insert new stock
