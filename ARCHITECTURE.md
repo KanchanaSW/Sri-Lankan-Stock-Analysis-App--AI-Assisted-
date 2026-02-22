@@ -66,6 +66,13 @@
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  scoring.ts                                                  │
+│  ├── Very Long-Term Score (0-100)                             │
+│  │   ├── 5-Year Performance (40%)                           │
+│  │   ├── 1-Year Performance (15%)                           │
+│  │   ├── Price to 52-Week High (15%)                        │
+│  │   ├── Market Cap Size (15%)                              │
+│  │   └── Downside Volatility (15%)                          │
+│  │                                                           │
 │  ├── Long-Term Score (0-100)                                │
 │  │   ├── Price Volatility (25%)                             │
 │  │   ├── Trend Consistency (25%)                            │
@@ -79,9 +86,9 @@
 │      ├── Breakout Detection (20%)                           │
 │      └── Trend Acceleration (20%)                           │
 │                                                               │
-│  explanations.ts                                             │
-│  ├── Analyzes score factors                                 │
-│  ├── Generates dynamic text                                 │
+│  explanations.ts & grokService.ts                             │
+│  ├── Dynamic Template Explanations                          │
+│  ├── Groq AI Analysis (Llama 3.3 70B)                       │
 │  ├── Calculates risk level                                  │
 │  └── Identifies strengths & concerns                        │
 │                                                               │
@@ -199,6 +206,25 @@
 - Focus: Blue-chip, established companies with proven profitability
 
 ## Scoring Algorithm Details
+
+### Very Long-Term (Buy & Hold) Score
+Designed for multi-year investment horizons.
+
+**1. 5-Year Performance (40%)**
+- Maps -50% to 100% performance to 0-100 score.
+- Heaviest weight on actual historical returns.
+
+**2. 1-Year Performance (15%)**
+- Maps -25% to 50% performance to 0-100 score.
+
+**3. Price to 52-Week High (15%)**
+- Ratio of current price vs high. Closer to high = higher score.
+
+**4. Market Cap Size (15%)**
+- Logarithmic scale of market cap. Larger cap = higher score for stability.
+
+**5. Downside Volatility (15%)**
+- Standard deviation of negative returns only. Lower downside risk = higher score.
 
 ### Long-Term Stability Score
 
@@ -426,12 +452,14 @@ StockScores {
 // AI-generated explanations
 AIExplanation {
   summary: string
+  veryLongTermAnalysis?: string // Added for Groq-powered analysis
   longTermAnalysis: string
   shortTermAnalysis: string
   riskLevel: 'Low' | 'Medium' | 'High'
   riskReasoning: string
   keyStrengths: string[]
   keyConcerns: string[]
+  generatedAt?: number
 }
 
 // Complete stock object with scores

@@ -1,8 +1,8 @@
-import { ScoreFactors, MomentumFactors } from '@/lib/types'
+import { ScoreFactors, MomentumFactors, VeryLongTermFactors } from '@/lib/types'
 
 interface ScoreBreakdownProps {
-  type: 'long-term' | 'short-term'
-  factors: ScoreFactors | MomentumFactors
+  type: 'very-long-term' | 'long-term' | 'short-term'
+  factors: ScoreFactors | MomentumFactors | VeryLongTermFactors
 }
 
 type FactorWeight = { weight: number; label: string }
@@ -23,7 +23,15 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
     trendAcceleration: { weight: 20, label: 'Trend Acceleration' }
   }
 
-  const factorConfig: Record<string, FactorWeight> = type === 'long-term' ? longTermFactorWeights : shortTermFactorWeights
+  const veryLongTermFactorWeights: Record<keyof VeryLongTermFactors, FactorWeight> = {
+    fiveYearPerformance: { weight: 40, label: '5-Year Performance' },
+    oneYearPerformance: { weight: 15, label: '1-Year Performance' },
+    priceToHigh52: { weight: 15, label: 'Price to 52-Week High' },
+    marketCapSize: { weight: 15, label: 'Market Cap Stability' },
+    downsideVolatility: { weight: 15, label: 'Downside Risk' }
+  }
+
+  const factorConfig: Record<string, FactorWeight> = type === 'very-long-term' ? veryLongTermFactorWeights : type === 'long-term' ? longTermFactorWeights : shortTermFactorWeights
 
   const getColorClass = (score: number) => {
     if (score >= 80) return 'bg-green-500'
@@ -42,7 +50,7 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <h3 className="mb-4">
-        {type === 'long-term' ? 'Long-Term Stability' : 'Short-Term Momentum'} Factor Breakdown
+        {type === 'very-long-term' ? 'Very Long-Term (Buy & Hold)' : type === 'long-term' ? 'Long-Term Stability' : 'Short-Term Momentum'} Factor Breakdown
       </h3>
       
       <div className="space-y-4">

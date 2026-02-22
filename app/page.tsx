@@ -7,7 +7,8 @@ import {
   useAllStocks, 
   useMarketOverview, 
   getTopLongTermStocksClient, 
-  getTopShortTermStocksClient 
+  getTopShortTermStocksClient,
+  getTopVeryLongTermStocksClient
 } from '@/lib/convexService'
 
 export default function Home() {
@@ -17,6 +18,7 @@ export default function Home() {
   const isLoading = stocksLoading || overviewLoading;
   
   // Get top stocks
+  const topVeryLongTerm = stocks.length > 0 ? getTopVeryLongTermStocksClient(stocks, 5) : [];
   const topLongTerm = stocks.length > 0 ? getTopLongTermStocksClient(stocks, 5) : [];
   const topShortTerm = stocks.length > 0 ? getTopShortTermStocksClient(stocks, 5) : [];
 
@@ -78,6 +80,31 @@ export default function Home() {
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-4">Last updated: {overview?.lastUpdated ?? 'N/A'}</p>
+        </div>
+      </section>
+
+      {/* Very Long-Term Picks */}
+      <section className="bg-purple-50 py-12">
+        <div className="container-custom">
+          <div className="mb-6">
+            <h2 className="mb-2 text-purple-900">Top Very Long-Term Picks (Buy & Hold)</h2>
+            <p className="text-purple-700">Exceptional 5-year stability and returns, ideal for multi-year holding</p>
+          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <LoadingSkeleton type="card" count={5} />
+            </div>
+          ) : topVeryLongTerm.length === 0 ? (
+            <div className="text-center py-12 text-purple-500">
+              No stocks available. Please seed the database first.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {topVeryLongTerm.map((stock) => (
+                <StockCard key={stock.id} stock={stock} type="very-long-term" showExplanation={true} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

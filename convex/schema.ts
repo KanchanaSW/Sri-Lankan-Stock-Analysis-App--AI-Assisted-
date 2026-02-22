@@ -14,8 +14,11 @@ export default defineSchema({
     weekLow52: v.number(),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
+    perf5Y: v.optional(v.number()),
+    perfY: v.optional(v.number()),
     aiExplanation: v.optional(v.object({
       summary: v.string(),
+      veryLongTermAnalysis: v.optional(v.string()),
       longTermAnalysis: v.string(),
       shortTermAnalysis: v.string(),
       riskLevel: v.union(v.literal("Low"), v.literal("Medium"), v.literal("High")),

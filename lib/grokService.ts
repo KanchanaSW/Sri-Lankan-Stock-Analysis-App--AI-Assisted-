@@ -23,7 +23,7 @@ export async function generateGrokExplanation(
 ): Promise<AIExplanation | null> {
   // Check if API key is available
   const key = apiKey || process.env.GROQ_API_KEY;
-  
+
   if (!key) {
     console.warn(`⚠️  No GROQ_API_KEY found for ${stock.symbol}, skipping AI generation`);
     return null;
@@ -72,7 +72,7 @@ export async function generateGrokExplanation(
 
     // Parse the JSON response
     const parsed = parseGroqResponse(content);
-    
+
     if (!parsed) {
       console.error(`Failed to parse Groq response for ${stock.symbol}`);
       return null;
@@ -94,7 +94,7 @@ export async function generateGrokExplanation(
  * Build a detailed prompt for Grok API
  */
 function buildAnalysisPrompt(stock: StockData, scores: StockScores): string {
-  const { longTermScore, shortTermScore, longTermFactors, shortTermFactors } = scores;
+  const { veryLongTermScore, longTermScore, shortTermScore, veryLongTermFactors, longTermFactors, shortTermFactors } = scores;
 
   return `Analyze this Sri Lankan stock for long-term investment:
 
@@ -108,8 +108,16 @@ function buildAnalysisPrompt(stock: StockData, scores: StockScores): string {
 - 52-Week Range: Rs. ${stock.weekLow52.toFixed(2)} - Rs. ${stock.weekHigh52.toFixed(2)}
 
 **Performance Scores:**
+- Very Long-Term (Buy & Hold) Score: ${veryLongTermScore}/100
 - Long-Term Stability Score: ${longTermScore}/100
 - Short-Term Momentum Score: ${shortTermScore}/100
+
+**Very Long-Term Factors:**
+- 5-Year Performance: ${stock.perf5Y !== undefined ? `${stock.perf5Y.toFixed(2)}%` : 'N/A'} (Score: ${veryLongTermFactors.fiveYearPerformance}/100)
+- 1-Year Performance: ${stock.perfY !== undefined ? `${stock.perfY.toFixed(2)}%` : 'N/A'} (Score: ${veryLongTermFactors.oneYearPerformance}/100)
+- Price to 52-Week High: ${veryLongTermFactors.priceToHigh52}/100
+- Market Cap Stability / Size: ${veryLongTermFactors.marketCapSize}/100
+- Downside Volatility Risk (Inverted): ${veryLongTermFactors.downsideVolatility}/100
 
 **Long-Term Factors:**
 - Price Volatility: ${longTermFactors.priceVolatility}/100 (higher = more stable)
@@ -124,12 +132,13 @@ function buildAnalysisPrompt(stock: StockData, scores: StockScores): string {
 - Breakout Detection: ${shortTermFactors.breakoutDetection}/100
 - Trend Acceleration: ${shortTermFactors.trendAcceleration}/100
 
-**Task:** Provide a comprehensive analysis suitable for long-term investors. Focus on stability, reliability, and sustained returns.
+**Task:** Provide a comprehensive analysis suitable for long-term investors. Focus on 5-year stability, reliability, and sustained returns.
 
 **Response Format (JSON only):**
 {
   "summary": "2-3 sentence overview of the stock's investment profile",
-  "longTermAnalysis": "Detailed paragraph analyzing long-term stability and suitability for buy-and-hold",
+  "veryLongTermAnalysis": "Detailed paragraph analyzing 5-year+ buy-and-hold viability, factoring in historical performance and market cap base",
+  "longTermAnalysis": "Detailed paragraph analyzing 1-year stability and recent market consistency",
   "shortTermAnalysis": "Paragraph on short-term momentum and current market sentiment",
   "riskLevel": "Low" | "Medium" | "High",
   "riskReasoning": "Explanation of the risk assessment",
@@ -145,7 +154,7 @@ function parseGroqResponse(content: string): Omit<AIExplanation, 'generatedAt'> 
   try {
     // Try to extract JSON from markdown code blocks if present
     let jsonString = content.trim();
-    
+
     // Remove markdown code fences if present
     if (jsonString.startsWith('```json')) {
       jsonString = jsonString.replace(/^```json\n/, '').replace(/\n```$/, '');
@@ -170,6 +179,7 @@ function parseGroqResponse(content: string): Omit<AIExplanation, 'generatedAt'> 
 
     return {
       summary: parsed.summary,
+      veryLongTermAnalysis: parsed.veryLongTermAnalysis,
       longTermAnalysis: parsed.longTermAnalysis,
       shortTermAnalysis: parsed.shortTermAnalysis,
       riskLevel: parsed.riskLevel,
@@ -192,14 +202,14 @@ export async function batchGenerateExplanations(
   apiKey?: string
 ): Promise<Map<string, AIExplanation>> {
   const results = new Map<string, AIExplanation>();
-  
+
   console.log(`\n🤖 Generating AI explanations for ${stocksWithScores.length} Long-Term Picks...\n`);
 
   for (const { stock, scores } of stocksWithScores) {
     console.log(`   Analyzing ${stock.symbol}...`);
-    
+
     const explanation = await generateGrokExplanation(stock, scores, apiKey);
-    
+
     if (explanation) {
       results.set(stock.symbol, explanation);
       console.log(`   ✅ ${stock.symbol} - AI analysis generated`);

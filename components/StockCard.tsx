@@ -4,21 +4,38 @@ import RiskIndicator from './RiskIndicator'
 
 interface StockCardProps {
   stock: StockWithScores
-  type: 'long-term' | 'short-term'
+  type: 'very-long-term' | 'long-term' | 'short-term'
   showExplanation?: boolean
 }
 
 export default function StockCard({ stock, type, showExplanation = false }: StockCardProps) {
-  const score = type === 'long-term' ? stock.scores.longTermScore : stock.scores.shortTermScore
-  const colorClass = type === 'long-term' ? 'text-green-600' : 'text-red-600'
-  const bgClass = type === 'long-term' ? 'bg-green-50' : 'bg-red-50'
-  const borderClass = type === 'long-term' ? 'border-green-200' : 'border-red-200'
+  let score = 0;
+  let colorClass = '';
+  let bgClass = '';
+  let borderClass = '';
+  let explanationText = '';
   
-  // Get explanation snippet (first sentence)
-  const explanationText = type === 'long-term' 
-    ? stock.explanation.longTermAnalysis 
-    : stock.explanation.shortTermAnalysis
-  const snippet = explanationText.split('.')[0] + '.'
+  if (type === 'very-long-term') {
+    score = stock.scores.veryLongTermScore;
+    colorClass = 'text-purple-600';
+    bgClass = 'bg-purple-50';
+    borderClass = 'border-purple-200';
+    explanationText = stock.explanation.veryLongTermAnalysis || stock.explanation.longTermAnalysis;
+  } else if (type === 'long-term') {
+    score = stock.scores.longTermScore;
+    colorClass = 'text-green-600';
+    bgClass = 'bg-green-50';
+    borderClass = 'border-green-200';
+    explanationText = stock.explanation.longTermAnalysis;
+  } else {
+    score = stock.scores.shortTermScore;
+    colorClass = 'text-red-600';
+    bgClass = 'bg-red-50';
+    borderClass = 'border-red-200';
+    explanationText = stock.explanation.shortTermAnalysis;
+  }
+
+  const snippet = explanationText ? explanationText.split('.')[0] + '.' : '';
   
   return (
     <Link href={`/stocks/${stock.id}`}>

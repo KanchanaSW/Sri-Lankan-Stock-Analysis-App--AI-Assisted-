@@ -1,7 +1,7 @@
 interface ScoreBadgeProps {
   score: number
   label: string
-  type: 'long-term' | 'short-term'
+  type: 'very-long-term' | 'long-term' | 'short-term'
   size?: 'sm' | 'md' | 'lg'
 }
 
@@ -9,11 +9,13 @@ export default function ScoreBadge({ score, label, type, size = 'md' }: ScoreBad
   // Determine color based on score
   const getColorClasses = () => {
     if (score >= 80) {
+      if (type === 'very-long-term') return 'bg-purple-500 text-white'
       return type === 'long-term' 
         ? 'bg-green-500 text-white'
         : 'bg-red-500 text-white'
     }
     if (score >= 60) {
+      if (type === 'very-long-term') return 'bg-purple-400 text-white'
       return type === 'long-term'
         ? 'bg-green-400 text-white'
         : 'bg-red-400 text-white'

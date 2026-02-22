@@ -54,12 +54,12 @@ function transformConvexStock(stock: ConvexStock, index: number): StockData {
  */
 function processStockData(stock: StockData, convexStock?: ConvexStock): StockWithScores {
   const scores = calculateStockScores(stock);
-  
+
   // Use stored AI explanation if available, otherwise generate from template
-  const explanation = convexStock?.aiExplanation 
-    ? convexStock.aiExplanation 
+  const explanation = convexStock?.aiExplanation
+    ? convexStock.aiExplanation
     : generateAIExplanation(scores);
-  
+
   return {
     ...stock,
     scores,
@@ -75,21 +75,21 @@ export function useAllStocks(): {
   isLoading: boolean;
 } {
   const stocksData = useQuery(api.stocks.getAllStocks);
-  
+
   if (stocksData === undefined) {
     return { stocks: [], isLoading: true };
   }
-  
+
   // Sort by creation time to maintain consistent order
   const sortedStocks = [...stocksData].sort(
     (a, b) => (a._creationTime ?? 0) - (b._creationTime ?? 0)
   );
-  
+
   const stocks = sortedStocks.map((stock, index) => {
     const convexStock = stock as ConvexStock;
     return processStockData(transformConvexStock(convexStock, index), convexStock);
   });
-  
+
   return { stocks, isLoading: false };
 }
 
@@ -101,19 +101,19 @@ export function useStockById(legacyId: string): {
   isLoading: boolean;
 } {
   const stockData = useQuery(api.stocks.getStockByLegacyId, { legacyId });
-  
+
   if (stockData === undefined) {
     return { stock: null, isLoading: true };
   }
-  
+
   if (stockData === null) {
     return { stock: null, isLoading: false };
   }
-  
+
   const index = parseInt(legacyId, 10) - 1;
   const convexStock = stockData as ConvexStock;
   const stock = processStockData(transformConvexStock(convexStock, index), convexStock);
-  
+
   return { stock, isLoading: false };
 }
 
@@ -125,15 +125,15 @@ export function useMarketOverview(): {
   isLoading: boolean;
 } {
   const data = useQuery(api.queries.getMarketOverview);
-  
+
   if (data === undefined) {
     return { overview: null, isLoading: true };
   }
-  
+
   if (data === null) {
     return { overview: null, isLoading: false };
   }
-  
+
   return {
     overview: {
       totalStocks: data.totalStocks,
@@ -154,18 +154,18 @@ export function useSectors(): {
   isLoading: boolean;
 } {
   const data = useQuery(api.queries.getSectors);
-  
+
   if (data === undefined) {
     return { sectors: [], isLoading: true };
   }
-  
+
   const sectors = data.map((sector): SectorData => ({
     name: sector.name,
     averagePerformance: sector.averagePerformance,
     stockCount: sector.stockCount,
     trending: sector.trending,
   }));
-  
+
   return { sectors, isLoading: false };
 }
 
@@ -192,15 +192,18 @@ export function filterStocksClient(
   options: FilterOptions
 ): StockWithScores[] {
   let filtered = [...stocks];
-  
+
   // Filter by sector
   if (options.sector && options.sector !== "All") {
     filtered = filtered.filter((stock) => stock.sector === options.sector);
   }
-  
+
   // Filter by investment type
   if (options.investmentType !== "all") {
     filtered = filtered.filter((stock) => {
+      if (options.investmentType === "very-long-term") {
+        return stock.scores.veryLongTermScore >= 70;
+      }
       if (options.investmentType === "long-term") {
         return stock.scores.longTermScore >= 70;
       }
@@ -210,7 +213,7 @@ export function filterStocksClient(
       return true;
     });
   }
-  
+
   // Filter by market cap range
   if (options.minMarketCap !== undefined) {
     filtered = filtered.filter((stock) => stock.marketCap >= options.minMarketCap!);
@@ -218,10 +221,10 @@ export function filterStocksClient(
   if (options.maxMarketCap !== undefined) {
     filtered = filtered.filter((stock) => stock.marketCap <= options.maxMarketCap!);
   }
-  
+
   // Sort
   filtered = sortStocksClient(filtered, options.sortBy);
-  
+
   return filtered;
 }
 
@@ -233,20 +236,23 @@ export function sortStocksClient(
   sortBy: string
 ): StockWithScores[] {
   const sorted = [...stocks];
-  
+
   switch (sortBy) {
+    case "very-long-term":
+      return sorted.sort((a, b) => b.scores.veryLongTermScore - a.scores.veryLongTermScore);
+
     case "long-term":
       return sorted.sort((a, b) => b.scores.longTermScore - a.scores.longTermScore);
-    
+
     case "short-term":
       return sorted.sort((a, b) => b.scores.shortTermScore - a.scores.shortTermScore);
-    
+
     case "price":
       return sorted.sort((a, b) => b.currentPrice - a.currentPrice);
-    
+
     case "change":
       return sorted.sort((a, b) => b.priceChange - a.priceChange);
-    
+
     default:
       return sorted;
   }
@@ -273,5 +279,17 @@ export function getTopShortTermStocksClient(
 ): StockWithScores[] {
   return [...stocks]
     .sort((a, b) => b.scores.shortTermScore - a.scores.shortTermScore)
+    .slice(0, limit);
+}
+
+/**
+ * Get top N stocks by very-long-term score (client-side)
+ */
+export function getTopVeryLongTermStocksClient(
+  stocks: StockWithScores[],
+  limit: number = 5
+): StockWithScores[] {
+  return [...stocks]
+    .sort((a, b) => b.scores.veryLongTermScore - a.scores.veryLongTermScore)
     .slice(0, limit);
 }

@@ -111,7 +111,7 @@ export const updateStock = mutation({
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
-    
+
     await ctx.db.patch(stockId, {
       ...filteredUpdates,
       updatedAt: Date.now(),
@@ -136,11 +136,11 @@ export const addOHLCData = mutation({
     // Check if data for this date already exists
     const existing = await ctx.db
       .query("ohlcData")
-      .withIndex("by_stock_date", (q) => 
+      .withIndex("by_stock_date", (q) =>
         q.eq("stockId", args.stockId).eq("date", args.date)
       )
       .first();
-    
+
     if (existing) {
       // Update existing record
       await ctx.db.patch(existing._id, {
@@ -172,7 +172,7 @@ export const updateSectorData = mutation({
       .query("sectors")
       .withIndex("by_name", (q) => q.eq("name", args.name))
       .first();
-    
+
     if (sector) {
       const { name, ...updates } = args;
       const filteredUpdates = Object.fromEntries(
@@ -196,11 +196,11 @@ export const updateMarketOverview = mutation({
   },
   handler: async (ctx, args) => {
     const overview = await ctx.db.query("marketOverview").first();
-    
+
     const filteredUpdates = Object.fromEntries(
       Object.entries(args).filter(([_, v]) => v !== undefined)
     );
-    
+
     if (overview) {
       await ctx.db.patch(overview._id, filteredUpdates);
     } else {
@@ -257,19 +257,19 @@ export const batchUpdateStocks = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    
+
     for (const update of args.updates) {
       const { stockId, ...fields } = update;
       const filteredFields = Object.fromEntries(
         Object.entries(fields).filter(([_, v]) => v !== undefined)
       );
-      
+
       await ctx.db.patch(stockId, {
         ...filteredFields,
         updatedAt: now,
       });
     }
-    
+
     return { updated: args.updates.length };
   },
 });
@@ -294,7 +294,7 @@ export const batchAddOHLCData = mutation({
   handler: async (ctx, args) => {
     let insertedCount = 0;
     let updatedCount = 0;
-    
+
     for (const ohlc of args.data) {
       // Check if data for this date already exists
       const existing = await ctx.db
@@ -303,7 +303,7 @@ export const batchAddOHLCData = mutation({
           q.eq("stockId", args.stockId).eq("date", ohlc.date)
         )
         .first();
-      
+
       if (existing) {
         // Update existing record
         await ctx.db.patch(existing._id, ohlc);
@@ -317,7 +317,7 @@ export const batchAddOHLCData = mutation({
         insertedCount++;
       }
     }
-    
+
     return { inserted: insertedCount, updated: updatedCount };
   },
 });
@@ -333,19 +333,19 @@ export const clearAllData = mutation({
     for (const data of ohlcData) {
       await ctx.db.delete(data._id);
     }
-    
+
     // Delete all stocks
     const stocks = await ctx.db.query("stocks").collect();
     for (const stock of stocks) {
       await ctx.db.delete(stock._id);
     }
-    
+
     // Delete all sectors
     const sectors = await ctx.db.query("sectors").collect();
     for (const sector of sectors) {
       await ctx.db.delete(sector._id);
     }
-    
+
     // Delete market overview
     const overviews = await ctx.db.query("marketOverview").collect();
     for (const overview of overviews) {
@@ -371,8 +371,11 @@ export const replaceAllStocks = mutation({
         priceChange: v.number(),
         weekHigh52: v.number(),
         weekLow52: v.number(),
+        perfY: v.optional(v.number()),
+        perf5Y: v.optional(v.number()),
         aiExplanation: v.optional(v.object({
           summary: v.string(),
+          veryLongTermAnalysis: v.optional(v.string()),
           longTermAnalysis: v.string(),
           shortTermAnalysis: v.string(),
           riskLevel: v.union(v.literal("Low"), v.literal("Medium"), v.literal("High")),
@@ -386,28 +389,28 @@ export const replaceAllStocks = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    
+
     // Step 1: Delete all existing stocks and their OHLC data
     const existingStocks = await ctx.db.query("stocks").collect();
-    
+
     for (const stock of existingStocks) {
       // Delete all OHLC data for this stock
       const ohlcData = await ctx.db
         .query("ohlcData")
         .withIndex("by_stock", (q) => q.eq("stockId", stock._id))
         .collect();
-      
+
       for (const data of ohlcData) {
         await ctx.db.delete(data._id);
       }
-      
+
       // Delete the stock
       await ctx.db.delete(stock._id);
     }
-    
+
     // Step 2: Insert new stocks with historical data
     const insertedIds: Id<"stocks">[] = [];
-    
+
     for (const stock of args.stocks) {
       const id = await ctx.db.insert("stocks", {
         ...stock,
@@ -415,20 +418,20 @@ export const replaceAllStocks = mutation({
         updatedAt: now,
       });
       insertedIds.push(id);
-      
+
       // Generate and insert historical OHLC data for this stock
       // Use price change to estimate volatility: higher change = higher volatility
       const volatility = Math.min(0.05, Math.max(0.01, Math.abs(stock.priceChange) / 100 + 0.015));
       // Use price change sign to determine trend direction
       const trend = stock.priceChange >= 0 ? 0.0003 : -0.0001;
-      
+
       const historicalData = generateHistoricalData(
         stock.currentPrice,
         90, // 90 days of data
         volatility,
         trend
       );
-      
+
       // Insert OHLC data for this stock
       for (const ohlc of historicalData) {
         await ctx.db.insert("ohlcData", {
@@ -437,9 +440,9 @@ export const replaceAllStocks = mutation({
         });
       }
     }
-    
-    return { 
-      deleted: existingStocks.length, 
+
+    return {
+      deleted: existingStocks.length,
       inserted: insertedIds.length,
       stockIds: insertedIds
     };
@@ -459,8 +462,11 @@ export const upsertStock = mutation({
     priceChange: v.number(),
     weekHigh52: v.number(),
     weekLow52: v.number(),
+    perfY: v.optional(v.number()),
+    perf5Y: v.optional(v.number()),
     aiExplanation: v.optional(v.object({
       summary: v.string(),
+      veryLongTermAnalysis: v.optional(v.string()),
       longTermAnalysis: v.string(),
       shortTermAnalysis: v.string(),
       riskLevel: v.union(v.literal("Low"), v.literal("Medium"), v.literal("High")),
@@ -472,13 +478,13 @@ export const upsertStock = mutation({
   },
   handler: async (ctx, args): Promise<Id<"stocks">> => {
     const now = Date.now();
-    
+
     // Check if stock exists
     const existing = await ctx.db
       .query("stocks")
       .withIndex("by_symbol", (q) => q.eq("symbol", args.symbol))
       .first();
-    
+
     if (existing) {
       // Update existing stock
       const updateData: any = {
@@ -489,14 +495,16 @@ export const upsertStock = mutation({
         priceChange: args.priceChange,
         weekHigh52: args.weekHigh52,
         weekLow52: args.weekLow52,
+        perfY: args.perfY,
+        perf5Y: args.perf5Y,
         updatedAt: now,
       };
-      
+
       // Include aiExplanation if provided
       if (args.aiExplanation) {
         updateData.aiExplanation = args.aiExplanation;
       }
-      
+
       await ctx.db.patch(existing._id, updateData);
       return existing._id;
     } else {

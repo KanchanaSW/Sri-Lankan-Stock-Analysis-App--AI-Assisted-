@@ -1,6 +1,6 @@
 # 🇱🇰 Sri Lankan Stock Analysis App
 
-A web-based platform that analyzes Colombo Stock Exchange (CSE) data and presents AI-assisted insights for long-term investing and short-term trading opportunities.
+A web-based platform that analyzes Colombo Stock Exchange (CSE) data and presents AI-assisted insights for three tiers of investing: very long-term buy-and-hold, long-term stability, and short-term momentum opportunities.
 
 **🌐 Live Demo:** [slstocks.netlify.app](https://slstocks.netlify.app)
 
@@ -9,9 +9,10 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 - **Dynamic Stock Discovery**: Automatically fetches the top 50 most profitable stocks (highest net income) from TradingView
 - **Real-Time Stock Data**: Live prices from TradingView's CSE feed
 - **Market Overview**: Summary of market statistics and trends
-- **Long-Term Analysis**: Identify stable stocks suitable for long-term holding
-- **Short-Term Opportunities**: Find high-momentum stocks for active trading
-- **AI-Assisted Insights**: Groq AI-powered analysis for Long-Term Picks with intelligent, context-aware explanations
+- **Very Long-Term Analysis**: Identify exceptional stocks for 5-year+ buy-and-hold strategies
+- **Long-Term Analysis**: Find stable stocks suitable for long-term holding
+- **Short-Term Opportunities**: Identify high-momentum stocks for active trading
+- **AI-Assisted Insights**: Groq AI-powered analysis (Llama 3.3 70B) for top picks with context-aware explanations
 - **Interactive Charts**: Historical price and volume visualization (Recharts)
 - **Advanced Filtering**: Filter stocks by sector, investment type, and market cap
 - **Automated Updates**: Daily stock list and price updates via GitHub Actions
@@ -23,7 +24,7 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 | **Frontend** | Next.js 14 (App Router), React 18, TypeScript |
 | **Styling** | Tailwind CSS |
 | **Backend** | Convex (Real-time database) |
-| **AI Analysis** | Groq API (Llama 3.3 70B) - for Long-Term Picks |
+| **AI Analysis** | Groq API (Llama 3.3 70B) |
 | **Charts** | Recharts |
 | **Data Source** | TradingView Scanner API |
 | **Hosting** | Netlify |
@@ -37,9 +38,10 @@ The app automatically tracks the **top 50 most profitable stocks** (by net incom
 - ✅ Highest net income (most profitable companies)
 - ✅ Real-time data from TradingView
 - ✅ Automatically refreshed daily
-- ✅ Includes metadata: sector, market cap, 52-week high/low
+- ✅ Includes metadata: sector, market cap, 52-week high/low, and 5-year performance
 
-**Classification by AI Scoring:**
+**Classification by Scoring:**
+- **Very Long-Term Picks**: High quality 5-year+ candidates (Score ≥ 70)
 - **Long-Term Picks**: Stocks with stability score ≥ 70
 - **Short-Term Picks**: Stocks with momentum score ≥ 70
 
@@ -75,10 +77,10 @@ Create a `.env.local` file:
 ```env
 NEXT_PUBLIC_CONVEX_URL=your-convex-deployment-url
 CONVEX_URL=your-convex-deployment-url
-GROQ_API_KEY=your-groq-api-key  # Optional: For Groq AI-powered analysis
+GROQ_API_KEY=your-groq-api-key  # Required for AI-powered analysis
 ```
 
-**📝 Note**: The `GROQ_API_KEY` is optional. Without it, the app uses template-based explanations. See [GROK_SETUP.md](GROK_SETUP.md) for detailed AI setup instructions.
+**📝 Note**: AI-powered analysis requires a `GROQ_API_KEY`. Without it, the app falls back to template-based explanations for all stocks.
 
 ### Development
 
@@ -136,8 +138,9 @@ npm start
 ├── lib/
 │   ├── config.ts                 # App configuration
 │   ├── convexService.ts          # Convex React hooks
-│   ├── explanations.ts           # AI explanation generator
 │   ├── scoring.ts                # Stock scoring algorithms
+│   ├── grokService.ts            # Groq AI Service integration
+│   ├── explanations.ts           # Template-based explanation generator
 │   ├── stockService.ts           # Utility functions
 │   ├── stockSymbols.ts           # Symbol format utilities
 │   └── types.ts                  # TypeScript types
@@ -150,6 +153,14 @@ npm start
 ```
 
 ## 📈 Scoring System
+
+### Very Long-Term (Buy & Hold) Score (0-100)
+Evaluates stocks for extreme long-term holding (5+ years):
+- 5-Year Performance (40%)
+- 1-Year Performance (15%)
+- Price to 52-Week High (15%)
+- Market Cap Size (15%)
+- Downside Volatility (15%)
 
 ### Long-Term Stability Score (0-100)
 Evaluates stocks for buy-and-hold investing based on:
@@ -168,58 +179,43 @@ Identifies trading opportunities based on:
 
 ## 🤖 AI-Powered Analysis (Groq)
 
-The **Top 5 Long-Term Picks** shown on the home page receive enhanced AI-generated analysis powered by Groq's blazing-fast LLM inference:
+The **Top 5 Long-Term Picks** shown on the home page receive enhanced AI-generated analysis powered by Groq's high-speed Llama 3.3 70B model.
 
-### What You Get
-- **Intelligent Summaries**: Context-aware investment profile
-- **Deep Analysis**: Detailed long-term and short-term perspectives
-- **Risk Assessment**: AI-evaluated risk levels with reasoning
-- **Key Insights**: Automatically identified strengths and concerns
+### Key AI Features
+- **Context-Aware Summaries**: Deep understanding of current market data
+- **Three-Tier Analysis**: Individual perspectives for Very Long-Term, Long-Term, and Short-Term
+- **Detailed Risk Assessment**: Reasoning-backed risk levels
+- **Strengths & Concerns**: Automatically identifies key investment factors
 
 ### How It Works
-1. Daily scraper calculates scores for all stocks
-2. Sorts by Long-Term Score and takes Top 5
-3. Groq API (Llama 3.3 70B) analyzes each Top 5 stock
-4. AI explanations stored in database for instant access
-5. Other stocks use template-based explanations
+1. Daily scraper identifies Top 5 stocks by Long-Term Stability Score.
+2. If `GROQ_API_KEY` is present, the Groq API analyzes each of these stocks.
+3. Analysis results are stored in Convex for instant retrieval.
+4. Other stocks use logical template-based explanations defined in `lib/explanations.ts`.
 
-### Cost & Free Tier
-- **Cost**: **$0 (completely free!)**
-- **Stocks analyzed**: 5 per day
-- **Free tier**: 14,400 requests/day, 500K tokens/day
-- **Your usage**: < 2% of daily limits
-
-See [GROK_SETUP.md](GROK_SETUP.md) for setup instructions.
-
-## 🔄 Automated Stock Discovery & Updates
+## 🔄 Automated Updates
 
 The scraper runs automatically via GitHub Actions:
 - **Schedule**: Daily at 3:00 PM Sri Lanka time (weekdays)
 - **Process**: 
-  1. Discovers top 50 most profitable stocks from TradingView (by net income)
-  2. Fetches current prices, 52-week high/low, sector data
-  3. Replaces entire stock database with fresh data
-  4. Calculates scores and identifies Long-Term Picks
-  5. Generates AI analysis for Long-Term Picks (if XAI_API_KEY is set)
-  6. Stores all data in Convex for instant access
-- **Source**: TradingView Scanner API
+  1. Discovers top 50 most profitable stocks (by net income)
+  2. Fetches latest metrics (Price, 52W High/Low, Historical OHLC)
+  3. Calculates all three scores
+  4. Generates AI analysis for top picks
+  5. Updates Convex database
 - **Manual trigger**: `npm run scrape`
-
-This ensures the app always shows the most financially sound companies with strong profitability, providing a solid foundation for investment decisions.
 
 ## 🚀 Deployment
 
 ### Netlify (Frontend)
-
-1. Connect your GitHub repository to Netlify
-2. Set environment variable: `NEXT_PUBLIC_CONVEX_URL`
+1. Connect repository to Netlify
+2. Set `NEXT_PUBLIC_CONVEX_URL` and `GROQ_API_KEY` environment variables
 3. Deploy automatically on push
 
 ### GitHub Actions (Scraper)
-
 Add repository secrets:
-- `CONVEX_URL` (required)
-- `GROQ_API_KEY` (optional, for AI analysis)
+- `CONVEX_URL` (Required)
+- `GROQ_API_KEY` (Required for AI generation)
 
 ## ⚠️ Disclaimer
 

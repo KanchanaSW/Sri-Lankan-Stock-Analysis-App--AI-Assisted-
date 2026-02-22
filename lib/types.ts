@@ -19,6 +19,8 @@ export interface StockData {
   priceChange: number // percentage
   weekHigh52: number
   weekLow52: number
+  perf5Y?: number // 5-Year performance percentage
+  perfY?: number  // 1-Year performance percentage
   historicalData: OHLCData[]
 }
 
@@ -44,15 +46,26 @@ export interface MomentumFactors {
   trendAcceleration: number
 }
 
+export interface VeryLongTermFactors {
+  fiveYearPerformance: number
+  oneYearPerformance: number
+  priceToHigh52: number
+  marketCapSize: number
+  downsideVolatility: number
+}
+
 export interface StockScores {
   longTermScore: number
   shortTermScore: number
+  veryLongTermScore: number
   longTermFactors: ScoreFactors
   shortTermFactors: MomentumFactors
+  veryLongTermFactors: VeryLongTermFactors
 }
 
 export interface AIExplanation {
   summary: string
+  veryLongTermAnalysis?: string
   longTermAnalysis: string
   shortTermAnalysis: string
   riskLevel: 'Low' | 'Medium' | 'High'
@@ -75,8 +88,8 @@ export interface MarketOverview {
   lastUpdated: string
 }
 
-export type InvestmentType = 'all' | 'long-term' | 'short-term'
-export type SortOption = 'long-term' | 'short-term' | 'price' | 'change'
+export type InvestmentType = 'all' | 'very-long-term' | 'long-term' | 'short-term'
+export type SortOption = 'very-long-term' | 'long-term' | 'short-term' | 'price' | 'change'
 
 export interface FilterOptions {
   sector: string
