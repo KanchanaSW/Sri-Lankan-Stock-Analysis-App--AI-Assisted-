@@ -9,10 +9,10 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 - **Dynamic Stock Discovery**: Automatically fetches the top 50 most profitable stocks (highest net income) from TradingView
 - **Real-Time Stock Data**: Live prices from TradingView's CSE feed
 - **Market Overview**: Summary of market statistics and trends
-- **Very Long-Term Analysis**: Identify exceptional stocks for 5-year+ buy-and-hold strategies
-- **Long-Term Analysis**: Find stable stocks suitable for long-term holding
-- **Short-Term Opportunities**: Identify high-momentum stocks for active trading
-- **AI-Assisted Insights**: Groq AI-powered analysis (Llama 3.3 70B) for top picks with context-aware explanations
+- **Very Long-Term Analysis**: Identify exceptional stocks for 5-year+ buy-and-hold strategies with dedicated multi-year metrics
+- **Long-Term Analysis**: Find stable stocks suitable for 1-year stability and consistent growth
+- **Short-Term Opportunities**: Identify high-momentum stocks for active tactical trading
+- **AI-Assisted Insights**: Three-tier context-aware analysis (Very Long-Term, Long-Term, Short-Term) powered by Groq (Llama 3.3 70B)
 - **Interactive Charts**: Historical price and volume visualization (Recharts) with **simulated historical data** for trend analysis
 - **Advanced Filtering**: Filter stocks by sector, investment type, and market cap
 - **Performance Optimized**: Pre-computed scoring and data processing performed server-side for instant page loads
@@ -29,7 +29,7 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 | **Charts** | Recharts |
 | **Data Source** | TradingView Scanner API (Live prices + Simulated OHLC) |
 | **Hosting** | Netlify |
-| **Automation** | GitHub Actions (Daily scraper) |
+| **Automation** | Convex Cron Jobs (Weekly scraper) |
 
 ## 📊 Tracked Stocks
 
@@ -38,7 +38,8 @@ The app automatically tracks the **top 50 most profitable stocks** (by net incom
 **Stock Selection Criteria:**
 - ✅ Highest net income (most profitable companies)
 - ✅ Real-time data from TradingView
-- ✅ Automatically refreshed daily
+- ✅ Automatically refreshed weekly for Very Long-Term picks (Monday 12:30 PM LKT)
+- ✅ Daily price and momentum updates (Mon-Fri)
 - ✅ Includes metadata: sector, market cap, 52-week high/low, and 5-year performance
 
 **Classification by Scoring:**
@@ -133,6 +134,8 @@ npm start
 ├── convex/
 │   ├── mutations.ts              # Database mutations
 │   ├── queries.ts                # Database queries
+│   ├── scraper.ts                # Serverless Convex Action for data fetching
+│   ├── crons.ts                  # Scheduled job configuration
 │   ├── schema.ts                 # Database schema
 │   ├── seed.ts                   # Seed data script
 │   └── stocks.ts                 # Stock-specific queries
@@ -178,32 +181,33 @@ Identifies trading opportunities based on:
 - Breakout Detection (20%)
 - Trend Acceleration (20%)
 
-## 🤖 AI-Powered Analysis (Groq)
-
-The **Top 5 Long-Term Picks** shown on the home page receive enhanced AI-generated analysis powered by Groq's high-speed Llama 3.3 70B model.
+The **Top picks** for each timeframe receive enhanced AI-generated analysis powered by Groq's high-speed Llama 3.3 70B model.
 
 ### Key AI Features
-- **Context-Aware Summaries**: Deep understanding of current market data
-- **Three-Tier Analysis**: Individual perspectives for Very Long-Term, Long-Term, and Short-Term
-- **Detailed Risk Assessment**: Reasoning-backed risk levels
-- **Strengths & Concerns**: Automatically identifies key investment factors
+- **Context-Aware Summaries**: Deep understanding of current market data and score justifications
+- **Three-Tier Analysis**: Dedicated analysis for **Very Long-Term (5Y+), Long-Term (1Y), and Short-Term (Weekly)** on every detail page
+- **Automated Score Integration**: AI mentions specific scores (e.g., "With a Very Long-Term score of 98/100...") to provide transparency
+- **Detailed Risk Assessment**: Reasoning-backed risk levels (Low, Medium, High)
+- **Strengths & Concerns**: Automatically identifies key investment factors based on quantitative data
 
 ### How It Works
-1. Daily scraper identifies Top 5 stocks by Long-Term Stability Score.
-2. If `GROQ_API_KEY` is present, the Groq API analyzes each of these stocks.
-3. Analysis results are stored in Convex for instant retrieval.
-4. Other stocks use logical template-based explanations defined in `lib/explanations.ts`.
+1. **Weekly Scraper (Monday)**: Identifies Top 5 "Very Long-Term Picks" for deep-dive AI analysis.
+2. **Daily Scraper (Weekdays)**: Refreshes prices and identifies Top 5 "Long-Term Stability Picks" for momentum analysis.
+3. **History Preservation**: The system preserves existing AI analysis for non-targeted tiers, ensuring the Monday deep-dive stays visible all week while prices update daily.
+4. **Performance**: Analysis results are stored in Convex for instant retrieval.
+5. **Fallbacks**: Other stocks use intelligent template-based explanations.
 
 ## 🔄 Automated Updates
 
-The scraper runs automatically via GitHub Actions ensuring high data integrity:
-- **Schedule**: Daily at 3:00 PM Sri Lanka time (weekdays)
+The app uses **Convex Cron Jobs** for fully automated data refreshes:
+- **Daily (Mon-Fri)**: At 10:00 AM and 3:00 PM LKT. Updates all prices and generates new AI analysis for the **Top 5 Long-Term Picks**.
+- **Weekly (Monday)**: At 12:30 PM LKT. Performs a deep-dive analysis for the **Top 5 Very Long-Term Picks**.
 - **Process**: 
-  1. **Discovery**: Identifies top 50 most profitable stocks (by net income)
-  2. **In-Memory Transformation**: Generates historical OHLC data and calculates all three scores locally
-  3. **AI Generation**: Fetches Groq AI analysis for top picks
-  4. **Atomic Update**: Performs a single `replaceAllStocks` transaction in Convex to avoid data inconsistencies
-- **Manual trigger**: `npm run scrape`
+  1. **Discovery**: Identifies top 50 most profitable stocks from TradingView
+  2. **Analysis**: Generates scores and handles AI insights for the targeted tier (preserving other analyses)
+  3. **Atomic Update**: Updates the entire database in a single transaction
+- **Benefits**: Zero external dependencies and preserved AI history across runs.
+- **Manual trigger**: `npx convex run scraper:runScrape '{ "tier": "very-long-term" }'`
 
 ## 🚀 Deployment
 

@@ -105,7 +105,13 @@ export default function StockDetailPage() {
           </div>
 
           {/* Scores & Risk */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+              <p className="text-sm text-gray-600 mb-2">Very Long-Term Score</p>
+              <p className="text-5xl font-bold text-purple-600">{scores.veryLongTermScore}</p>
+              <p className="text-xs text-gray-500 mt-2">Out of 100</p>
+            </div>
+
             <div className="bg-green-50 border border-green-200 rounded-lg p-6">
               <p className="text-sm text-gray-600 mb-2">Long-Term Stability Score</p>
               <p className="text-5xl font-bold text-green-600">{scores.longTermScore}</p>
@@ -134,7 +140,12 @@ export default function StockDetailPage() {
                 <p className="text-gray-700 leading-relaxed">{explanation.summary}</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Very Long-Term Analysis</h4>
+                  <p className="text-sm text-gray-700 leading-relaxed">{explanation.veryLongTermAnalysis || "Not available"}</p>
+                </div>
+
                 <div>
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Long-Term Analysis</h4>
                   <p className="text-sm text-gray-700 leading-relaxed">{explanation.longTermAnalysis}</p>
@@ -175,7 +186,8 @@ export default function StockDetailPage() {
           </div>
 
           {/* Score Breakdowns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <ScoreBreakdown type="very-long-term" factors={scores.veryLongTermFactors} />
             <ScoreBreakdown type="long-term" factors={scores.longTermFactors} />
             <ScoreBreakdown type="short-term" factors={scores.shortTermFactors} />
           </div>

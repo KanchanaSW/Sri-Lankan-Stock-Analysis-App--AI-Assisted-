@@ -137,9 +137,9 @@ function buildAnalysisPrompt(stock: StockData, scores: StockScores): string {
 **Response Format (JSON only):**
 {
   "summary": "2-3 sentence overview of the stock's investment profile",
-  "veryLongTermAnalysis": "Detailed paragraph analyzing 5-year+ buy-and-hold viability, factoring in historical performance and market cap base",
-  "longTermAnalysis": "Detailed paragraph analyzing 1-year stability and recent market consistency",
-  "shortTermAnalysis": "Paragraph on short-term momentum and current market sentiment",
+  "veryLongTermAnalysis": "Detailed paragraph analyzing 5-year+ buy-and-hold viability, factoring in historical performance and market cap base. Mention the Very Long-Term score of ${veryLongTermScore}/100.",
+  "longTermAnalysis": "Detailed paragraph analyzing 1-year stability and recent market consistency. Mention the Long-Term Stability score of ${longTermScore}/100.",
+  "shortTermAnalysis": "Paragraph on short-term momentum and current market sentiment. Mention the Short-Term Momentum score of ${shortTermScore}/100.",
   "riskLevel": "Low" | "Medium" | "High",
   "riskReasoning": "Explanation of the risk assessment",
   "keyStrengths": ["strength 1", "strength 2", "strength 3"],

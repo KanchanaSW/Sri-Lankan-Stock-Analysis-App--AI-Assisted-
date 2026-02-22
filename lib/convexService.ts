@@ -13,6 +13,7 @@ type ConvexStock = Doc<"stocks"> & {
   historicalData: Doc<"ohlcData">[];
   aiExplanation?: {
     summary: string;
+    veryLongTermAnalysis?: string;
     longTermAnalysis: string;
     shortTermAnalysis: string;
     riskLevel: 'Low' | 'Medium' | 'High';
@@ -163,7 +164,7 @@ export function useSectors(): {
     return { sectors: [], isLoading: true };
   }
 
-  const sectors = data.map((sector): SectorData => ({
+  const sectors = data.map((sector: any): SectorData => ({
     name: sector.name,
     averagePerformance: sector.averagePerformance,
     stockCount: sector.stockCount,

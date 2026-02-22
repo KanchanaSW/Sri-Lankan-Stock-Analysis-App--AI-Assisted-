@@ -88,7 +88,7 @@ export default function Home() {
         <div className="container-custom">
           <div className="mb-6">
             <h2 className="mb-2 text-purple-900">Top Very Long-Term Picks (Buy & Hold)</h2>
-            <p className="text-purple-700">Exceptional 5-year stability and returns, ideal for multi-year holding</p>
+            <p className="text-purple-700">Exceptional 5-year stability and returns, ideal for multi-year holding • Automatically updated every Monday</p>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">

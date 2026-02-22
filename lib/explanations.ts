@@ -1,4 +1,4 @@
-import { AIExplanation, StockScores, ScoreFactors, MomentumFactors } from './types'
+import { AIExplanation, StockScores, ScoreFactors, MomentumFactors, VeryLongTermFactors } from './types'
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -30,7 +30,7 @@ function getScoreLevel(score: number): 'high' | 'medium' | 'low' {
 
 function calculateRiskLevel(scores: StockScores): 'Low' | 'Medium' | 'High' {
   const avgScore = (scores.longTermScore + scores.shortTermScore) / 2
-  
+
   // High average score = low risk
   if (avgScore >= 70) return 'Low'
   if (avgScore >= 55) return 'Medium'
@@ -42,26 +42,26 @@ function generateRiskReasoning(
   scores: StockScores
 ): string {
   const { longTermScore, shortTermScore, longTermFactors, shortTermFactors } = scores
-  
+
   if (riskLevel === 'Low') {
     const strengths: string[] = []
     if (longTermFactors.priceVolatility >= 70) strengths.push('low price volatility')
     if (longTermFactors.trendConsistency >= 70) strengths.push('consistent trend patterns')
     if (shortTermFactors.priceMomentum >= 70) strengths.push('strong positive momentum')
-    
+
     return `This stock demonstrates ${strengths.length > 0 ? strengths.join(' and ') : 'strong fundamentals'}, indicating lower investment risk with reliable performance metrics.`
   }
-  
+
   if (riskLevel === 'Medium') {
     return `This stock shows moderate risk characteristics with a balanced profile. While some indicators are positive, there are areas of volatility or uncertainty that investors should monitor.`
   }
-  
+
   // High risk
   const concerns: string[] = []
   if (longTermFactors.priceVolatility < 50) concerns.push('high price volatility')
   if (shortTermFactors.volumeChange < 50) concerns.push('inconsistent trading volumes')
   if (shortTermFactors.trendAcceleration < 40) concerns.push('uncertain trend direction')
-  
+
   return `This stock carries higher risk due to ${concerns.length > 0 ? concerns.join(', ') : 'challenging market conditions'}. More suitable for risk-tolerant investors with active monitoring capabilities.`
 }
 
@@ -71,15 +71,15 @@ function generateLongTermAnalysis(score: number, factors: ScoreFactors): string 
   const level = getScoreLevel(score)
   const strongest = identifyStrongestFactors(factors, 2)
   const weakest = identifyWeakestFactors(factors, 1)
-  
+
   if (level === 'high') {
     return `This stock demonstrates excellent long-term stability characteristics with a score of ${score}/100. Key strengths include ${strongest[0].toLowerCase()} and ${strongest[1].toLowerCase()}, making it well-suited for buy-and-hold strategies. The consistent performance across multiple quarters suggests reliable returns over extended investment horizons.`
   }
-  
+
   if (level === 'medium') {
     return `With a long-term stability score of ${score}/100, this stock shows moderate characteristics for extended holding. While ${strongest[0].toLowerCase()} is favorable, ${weakest[0].toLowerCase()} shows room for improvement. This may be suitable for diversified portfolios with a balanced risk approach.`
   }
-  
+
   return `The long-term stability score of ${score}/100 indicates this stock may face challenges for extended holding periods. Concerns around ${weakest[0].toLowerCase()} suggest higher volatility. Investors should carefully evaluate their risk tolerance and investment timeline before committing to this position.`
 }
 
@@ -87,45 +87,59 @@ function generateShortTermAnalysis(score: number, factors: MomentumFactors): str
   const level = getScoreLevel(score)
   const strongest = identifyStrongestFactors(factors, 2)
   const weakest = identifyWeakestFactors(factors, 1)
-  
+
   if (level === 'high') {
     return `This stock exhibits strong short-term momentum with a score of ${score}/100. Notable factors include exceptional ${strongest[0].toLowerCase()} and robust ${strongest[1].toLowerCase()}. This suggests significant near-term market interest and potential for tactical trading opportunities. However, higher momentum typically comes with increased volatility.`
   }
-  
+
   if (level === 'medium') {
     return `With a momentum score of ${score}/100, this stock shows moderate short-term potential. ${strongest[0]} is encouraging, though ${weakest[0].toLowerCase()} remains a concern. This may appeal to investors seeking balanced exposure to near-term market movements without excessive risk.`
   }
-  
+
   return `The short-term momentum score of ${score}/100 indicates limited near-term catalysts. Challenges with ${weakest[0].toLowerCase()} suggest reduced market interest at present. This stock may be more suitable for patient, long-term focused investors rather than active traders.`
 }
 
-function generateSummary(scores: StockScores): string {
-  const { longTermScore, shortTermScore } = scores
-  
-  // Determine primary classification
-  if (longTermScore >= 70 && shortTermScore < 65) {
-    return `This stock is classified as a long-term stability candidate, making it ideal for investors seeking steady, reliable returns over extended periods. The strong stability metrics outweigh the moderate momentum indicators.`
+function generateVeryLongTermAnalysis(score: number, factors: VeryLongTermFactors): string {
+  const level = getScoreLevel(score)
+
+  if (level === 'high') {
+    return `This stock is an exceptional candidate for a 5-year+ buy-and-hold strategy, with a very long-term score of ${score}/100. Its strong historical performance and market cap base provide a solid foundation for decade-long wealth compounding.`
   }
-  
+
+  if (level === 'medium') {
+    return `With a very long-term score of ${score}/100, this stock shows reasonable potential for multi-year holding. While it lacks some of the extreme stability markers of top-tier picks, its historical resilience makes it worth considering for diversified long-term portfolios.`
+  }
+
+  return `The very long-term score of ${score}/100 suggests this stock may not be the most reliable choice for a 5-year+ buy-and-hold strategy. More frequent re-evaluation is recommended as market conditions evolve.`
+}
+
+function generateSummary(scores: StockScores): string {
+  const { longTermScore, shortTermScore, veryLongTermScore } = scores
+
+  // Determine primary classification
+  if (veryLongTermScore >= 80) {
+    return `This stock is a premier "Buy & Hold" candidate for the multi-year investor. Its exceptional 5-year stability and performance make it a cornerstone for very long-term portfolios.`
+  }
+
   if (shortTermScore >= 70 && longTermScore < 65) {
     return `This stock is classified as a short-term momentum opportunity, suitable for active traders capitalizing on near-term price movements. The elevated momentum indicators suggest current market interest, though stability for extended holding is less certain.`
   }
-  
+
   if (longTermScore >= 70 && shortTermScore >= 70) {
     return `This stock presents a rare combination of both long-term stability and short-term momentum, making it attractive for various investment strategies. It offers the potential for near-term gains while maintaining characteristics suitable for extended holding.`
   }
-  
+
   if (longTermScore < 50 && shortTermScore < 50) {
     return `This stock currently shows limited appeal for both long-term holding and short-term trading. Investors should carefully assess the risk-reward profile and consider whether this aligns with their portfolio objectives and risk tolerance.`
   }
-  
+
   return `This stock demonstrates balanced characteristics across both long-term stability and short-term momentum dimensions. It may serve as a moderate addition to diversified portfolios, though neither classification strongly dominates.`
 }
 
 function generateKeyStrengths(scores: StockScores): string[] {
   const { longTermFactors, shortTermFactors } = scores
   const strengths: string[] = []
-  
+
   // Check long-term factors
   if (longTermFactors.priceVolatility >= 75) {
     strengths.push('Exceptionally low price volatility')
@@ -139,7 +153,7 @@ function generateKeyStrengths(scores: StockScores): string[] {
   if (longTermFactors.sectorStrength >= 75) {
     strengths.push('Strong sector performance and positioning')
   }
-  
+
   // Check short-term factors
   if (shortTermFactors.volumeChange >= 75) {
     strengths.push('Significant recent volume increases')
@@ -153,14 +167,14 @@ function generateKeyStrengths(scores: StockScores): string[] {
   if (shortTermFactors.trendAcceleration >= 75) {
     strengths.push('Accelerating upward trend')
   }
-  
+
   return strengths.length > 0 ? strengths : ['Moderate performance across key metrics']
 }
 
 function generateKeyConcerns(scores: StockScores): string[] {
   const { longTermFactors, shortTermFactors } = scores
   const concerns: string[] = []
-  
+
   // Check long-term factors
   if (longTermFactors.priceVolatility < 40) {
     concerns.push('High price volatility may impact stability')
@@ -174,7 +188,7 @@ function generateKeyConcerns(scores: StockScores): string[] {
   if (longTermFactors.sectorStrength < 40) {
     concerns.push('Sector facing headwinds')
   }
-  
+
   // Check short-term factors
   if (shortTermFactors.volumeChange < 40) {
     concerns.push('Declining or weak trading volumes')
@@ -188,7 +202,7 @@ function generateKeyConcerns(scores: StockScores): string[] {
   if (shortTermFactors.trendAcceleration < 40) {
     concerns.push('Decelerating or negative trend')
   }
-  
+
   return concerns.length > 0 ? concerns : ['Limited concerns identified']
 }
 
@@ -196,9 +210,10 @@ function generateKeyConcerns(scores: StockScores): string[] {
 
 export function generateAIExplanation(scores: StockScores): AIExplanation {
   const riskLevel = calculateRiskLevel(scores)
-  
+
   return {
     summary: generateSummary(scores),
+    veryLongTermAnalysis: generateVeryLongTermAnalysis(scores.veryLongTermScore, scores.veryLongTermFactors),
     longTermAnalysis: generateLongTermAnalysis(scores.longTermScore, scores.longTermFactors),
     shortTermAnalysis: generateShortTermAnalysis(scores.shortTermScore, scores.shortTermFactors),
     riskLevel,

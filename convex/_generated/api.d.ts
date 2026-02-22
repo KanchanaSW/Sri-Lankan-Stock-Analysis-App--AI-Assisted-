@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
 import type * as mutations from "../mutations.js";
 import type * as queries from "../queries.js";
+import type * as scraper from "../scraper.js";
 import type * as seed from "../seed.js";
 import type * as stocks from "../stocks.js";
 
@@ -20,8 +22,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   mutations: typeof mutations;
   queries: typeof queries;
+  scraper: typeof scraper;
   seed: typeof seed;
   stocks: typeof stocks;
 }>;
