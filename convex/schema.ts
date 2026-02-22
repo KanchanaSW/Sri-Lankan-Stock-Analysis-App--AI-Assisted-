@@ -27,6 +27,31 @@ export default defineSchema({
       keyConcerns: v.array(v.string()),
       generatedAt: v.number(),
     })),
+    scores: v.optional(v.object({
+      longTermScore: v.number(),
+      shortTermScore: v.number(),
+      veryLongTermScore: v.number(),
+      longTermFactors: v.object({
+        priceVolatility: v.number(),
+        trendConsistency: v.number(),
+        volumeStability: v.number(),
+        sectorStrength: v.number(),
+        marketCapStability: v.number(),
+      }),
+      shortTermFactors: v.object({
+        volumeChange: v.number(),
+        priceMomentum: v.number(),
+        breakoutDetection: v.number(),
+        trendAcceleration: v.number(),
+      }),
+      veryLongTermFactors: v.object({
+        fiveYearPerformance: v.number(),
+        oneYearPerformance: v.number(),
+        priceToHigh52: v.number(),
+        marketCapSize: v.number(),
+        downsideVolatility: v.number(),
+      }),
+    })),
   })
     .index("by_symbol", ["symbol"])
     .index("by_sector", ["sector"]),

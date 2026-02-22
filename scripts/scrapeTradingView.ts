@@ -1,9 +1,9 @@
 import { config } from "dotenv";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
-import { calculateStockScores } from "../lib/scoring";
+import { calculateStockScores, generateHistoricalData } from "../lib/scoring";
 import { batchGenerateExplanations } from "../lib/grokService";
-import { StockData } from "../lib/types";
+import { StockData, StockScores, AIExplanation } from "../lib/types";
 
 // Load environment variables from .env.local
 config({ path: ".env.local" });
@@ -21,7 +21,6 @@ const client = new ConvexHttpClient(CONVEX_URL);
 
 // ============================================================================
 // TradingView Data Scraper for Colombo Stock Exchange (CSE)
-// Reference: https://www.tradingview.com/symbols/CSELK-JKH.N0000/
 // ============================================================================
 
 interface TradingViewQuote {
@@ -37,6 +36,7 @@ interface StockPriceData {
   price: number;
   change: number;
   changePercent: number;
+  compare_abs?: number;
   high52Week: number;
   low52Week: number;
   volume: number;
@@ -57,15 +57,11 @@ interface DiscoveredStock {
 
 /**
  * Discovers stocks with highest net income from TradingView's scan API
- * Returns top 50 most profitable stocks with metadata
  */
 async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
   const discovered: DiscoveredStock[] = [];
-
-  // TradingView scan API endpoint for Sri Lanka
   const url = "https://scanner.tradingview.com/srilanka/scan";
 
-  // Build the request payload to get top 50 stocks by net income
   const payload = {
     filter: [
       { left: "volume", operation: "greater", right: 0 },
@@ -75,23 +71,12 @@ async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
     markets: ["srilanka"],
     symbols: { query: { types: [] }, tickers: [] },
     columns: [
-      "name",                    // Company name
-      "close",                   // Current price
-      "change",                  // Price change percentage
-      "net_income",              // Net income (profitability)
-      "volume",                  // Trading volume
-      "sector",                  // Sector
-      "market_cap_basic",        // Market cap
-      "price_52_week_high",      // 52-week high
-      "price_52_week_low",       // 52-week low
-      "Perf.Y",                  // 1-Year Performance
-      "Perf.5Y"                  // 5-Year Performance
+      "name", "close", "change", "net_income", "volume", "sector",
+      "market_cap_basic", "price_52_week_high", "price_52_week_low",
+      "Perf.Y", "Perf.5Y"
     ],
-    sort: {
-      sortBy: "net_income",      // Sort by net income
-      sortOrder: "desc"
-    },
-    range: [0, 50]  // Top 50 most profitable
+    sort: { sortBy: "net_income", sortOrder: "desc" },
+    range: [0, 50]
   };
 
   try {
@@ -104,31 +89,22 @@ async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      console.error(`TradingView discovery API error: ${response.status}`);
-      return discovered;
-    }
+    if (!response.ok) return discovered;
 
     const data: TradingViewResponse = await response.json();
-
     for (const quote of data.data) {
-      // Extract symbol from "CSELK:JKH.N0000" format
       const fullSymbol = quote.s.split(":")[1];
       if (!fullSymbol) continue;
 
       const [name, close, change, netIncome, volume, sector, marketCap, high52, low52, perfY, perf5Y] = quote.d;
-
-      // Validate required fields
       if (typeof close === "number" && close > 0 && typeof name === "string") {
-        // Extract local symbol (remove .N0000 suffix)
         const localSymbol = fullSymbol.replace(".N0000", "");
-
         discovered.push({
           symbol: localSymbol,
           tradingView: fullSymbol,
           name: name || `${localSymbol} Stock`,
           sector: typeof sector === "string" ? sector : "Unknown",
-          marketCap: typeof marketCap === "number" ? marketCap / 1_000_000 : 0, // Convert to millions
+          marketCap: typeof marketCap === "number" ? marketCap / 1_000_000 : 0,
           currentPrice: close,
           priceChange: typeof change === "number" ? change : 0,
           volume: typeof volume === "number" ? volume : 0,
@@ -138,62 +114,36 @@ async function discoverActiveStocks(): Promise<DiscoveredStock[]> {
       }
     }
   } catch (error) {
-    console.error("Error discovering stocks from TradingView:", error);
+    console.error("Error discovering stocks:", error);
   }
-
   return discovered;
 }
 
 /**
- * Fetches stock data from TradingView's scan API
- * This is the same API TradingView uses internally for their screener
+ * Fetches detailed price data
  */
 async function fetchTradingViewData(symbols: string[]): Promise<Map<string, StockPriceData>> {
   const results = new Map<string, StockPriceData>();
-
-  // TradingView scan API endpoint
   const url = "https://scanner.tradingview.com/srilanka/scan";
 
-  // Build the request payload
   const payload = {
-    symbols: {
-      tickers: symbols.map(s => `CSELK:${s}`),
-      query: { types: [] }
-    },
-    columns: [
-      "close",           // Current price
-      "change",          // Price change
-      "change_abs",      // Absolute change
-      "high",            // Day high
-      "low",             // Day low
-      "volume",          // Volume
-      "price_52_week_high",  // 52-week high
-      "price_52_week_low"    // 52-week low
-    ]
+    symbols: { tickers: symbols.map(s => `CSELK:${s}`), query: { types: [] } },
+    columns: ["close", "change", "change_abs", "high", "low", "volume", "price_52_week_high", "price_52_week_low"]
   };
 
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-      },
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      console.error(`TradingView API error: ${response.status}`);
-      return results;
-    }
+    if (!response.ok) return results;
 
     const data: TradingViewResponse = await response.json();
-
     for (const quote of data.data) {
-      // Extract symbol from "CSELK:JKH.N0000" format
       const symbol = quote.s.split(":")[1];
       const [close, change, changeAbs, high, low, volume, high52, low52] = quote.d;
-
       if (typeof close === "number" && close > 0) {
         results.set(symbol, {
           price: close,
@@ -206,222 +156,123 @@ async function fetchTradingViewData(symbols: string[]): Promise<Map<string, Stoc
       }
     }
   } catch (error) {
-    console.error("Error fetching from TradingView:", error);
+    console.error("Error fetching price data:", error);
   }
-
   return results;
 }
 
 async function updateAllPrices() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🚀 Sri Lankan Stock Scraper - TradingView");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`📅 ${new Date().toLocaleString("en-LK", { timeZone: "Asia/Colombo" })}`);
-  console.log(`🔗 Convex: ${CONVEX_URL?.substring(0, 40)}...`);
+  console.log("🚀 Sri Lankan Stock Scraper - Atomic Update");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  // STEP 1: Discover stocks with highest net income from TradingView
-  console.log("🔍 Discovering most profitable stocks (highest net income) from TradingView...\n");
+  // 1. Discover Stocks
   const discoveredStocks = await discoverActiveStocks();
-
   if (discoveredStocks.length === 0) {
-    console.error("❌ Failed to discover any stocks from TradingView");
+    console.error("❌ No stocks discovered");
     process.exit(1);
   }
+  console.log(`✅ Discovered ${discoveredStocks.length} profitable stocks`);
 
-  console.log(`✅ Discovered ${discoveredStocks.length} most profitable stocks\n`);
-
-  // STEP 2: Fetch detailed price data for all discovered stocks
-  console.log("📡 Fetching detailed price data from TradingView...\n");
+  // 2. Fetch Detailed Prices
   const tradingViewSymbols = discoveredStocks.map(s => s.tradingView);
   const priceData = await fetchTradingViewData(tradingViewSymbols);
+  console.log(`✅ Received price data for ${priceData.size} stocks`);
 
-  if (priceData.size === 0) {
-    console.error("❌ Failed to fetch price data from TradingView");
-    process.exit(1);
-  }
+  // 3. Prepare Preliminary Data & Compute Scores locally
+  console.log("📊 Computing scores and generating historical data in memory...");
 
-  console.log(`✅ Received price data for ${priceData.size} stocks\n`);
-
-  // STEP 3: Prepare stock data for database replacement
-  console.log("🗄️  Preparing stock data for database...\n");
-  const stocksToInsert = discoveredStocks.map(stock => {
+  const stocksWithComputedData = discoveredStocks.map((stock, index) => {
     const priceInfo = priceData.get(stock.tradingView);
+    const currentPrice = priceInfo?.price ?? stock.currentPrice;
+    const priceChange = priceInfo?.changePercent ?? stock.priceChange;
 
-    return {
-      symbol: stock.symbol,
-      name: stock.name,
-      sector: stock.sector,
-      marketCap: stock.marketCap,
-      currentPrice: priceInfo?.price ?? stock.currentPrice,
-      priceChange: priceInfo?.changePercent ?? stock.priceChange,
-      weekHigh52: priceInfo?.high52Week ?? stock.currentPrice * 1.1,
-      weekLow52: priceInfo?.low52Week ?? stock.currentPrice * 0.9,
-      perfY: stock.perfY,
-      perf5Y: stock.perf5Y,
-    };
-  });
+    // Generate OHLC data in memory
+    const volatility = Math.min(0.05, Math.max(0.01, Math.abs(priceChange) / 100 + 0.015));
+    const trend = priceChange >= 0 ? 0.0003 : -0.0001;
+    const historicalData = generateHistoricalData(currentPrice, 90, volatility, trend);
 
-  // STEP 4: Calculate scores and identify Long-Term Picks
-  console.log("📊 Calculating scores for stocks...\n");
-
-  // First, we need to insert stocks to get historical data generated
-  // Then we'll update with AI explanations
-  console.log("🔄 Initial database insertion...\n");
-  let insertResult;
-  try {
-    insertResult = await client.mutation(api.mutations.replaceAllStocks, {
-      stocks: stocksToInsert,
-    });
-
-    console.log(`✅ Initial insert: ${insertResult.deleted} deleted, ${insertResult.inserted} inserted\n`);
-  } catch (error) {
-    console.error("❌ Failed to insert stocks:", error);
-    process.exit(1);
-  }
-
-  // STEP 5: Fetch stocks with historical data to calculate scores
-  console.log("📈 Fetching stocks with historical data for score calculation...\n");
-
-  let allStocks;
-  try {
-    allStocks = await client.query(api.stocks.getAllStocks);
-  } catch (error) {
-    console.error("❌ Failed to fetch stocks:", error);
-    process.exit(1);
-  }
-
-  // Convert to StockData format and calculate scores
-  const stocksWithScores = allStocks.map((stock: any, index: number) => {
+    // Create StockData object for scoring
     const stockData: StockData = {
-      id: (index + 1).toString(),
+      id: index.toString(),
       symbol: stock.symbol,
       name: stock.name,
       sector: stock.sector,
       marketCap: stock.marketCap,
-      currentPrice: stock.currentPrice,
-      priceChange: stock.priceChange,
-      weekHigh52: stock.weekHigh52,
-      weekLow52: stock.weekLow52,
+      currentPrice,
+      priceChange,
+      weekHigh52: priceInfo?.high52Week ?? currentPrice * 1.1,
+      weekLow52: priceInfo?.low52Week ?? currentPrice * 0.9,
       perfY: stock.perfY,
       perf5Y: stock.perf5Y,
-      historicalData: stock.historicalData.map((ohlc: any) => ({
-        date: ohlc.date,
-        open: ohlc.open,
-        high: ohlc.high,
-        low: ohlc.low,
-        close: ohlc.close,
-        volume: ohlc.volume,
-      })),
+      historicalData,
     };
 
     const scores = calculateStockScores(stockData);
-    return { stock: stockData, scores, convexId: stock._id };
+    return { stockData, scores };
   });
 
-  // Get Top 5 Long-Term Picks by score (same as shown on home page)
-  const top5LongTermPicks = [...stocksWithScores]
+  // 4. Identify Top 5 Long-Term Picks
+  const top5LongTerm = [...stocksWithComputedData]
     .sort((a, b) => b.scores.longTermScore - a.scores.longTermScore)
     .slice(0, 5);
 
-  console.log(`🎯 Top 5 Long-Term Picks (for AI analysis):`);
-  top5LongTermPicks.forEach(({ stock, scores }, i) => {
-    console.log(`   ${i + 1}. ${stock.symbol} - Score: ${scores.longTermScore}`);
+  console.log(`🎯 Identified Top 5 Long-Term Picks for AI analysis`);
+
+  // 5. Generate AI Explanations
+  const aiExplanations = await batchGenerateExplanations(
+    top5LongTerm.map(d => ({ stock: d.stockData, scores: d.scores })),
+    process.env.GROQ_API_KEY
+  );
+
+  // 6. Build Final Objects
+  console.log("📦 Building final stock objects for atomic injection...");
+  const finalStocks = stocksWithComputedData.map(({ stockData, scores }) => {
+    const aiExplanation = aiExplanations.get(stockData.symbol);
+
+    return {
+      symbol: stockData.symbol,
+      name: stockData.name,
+      sector: stockData.sector,
+      marketCap: stockData.marketCap,
+      currentPrice: stockData.currentPrice,
+      priceChange: stockData.priceChange,
+      weekHigh52: stockData.weekHigh52,
+      weekLow52: stockData.weekLow52,
+      perfY: stockData.perfY,
+      perf5Y: stockData.perf5Y,
+      historicalData: stockData.historicalData,
+      scores,
+      aiExplanation: aiExplanation || undefined,
+    };
   });
-  console.log('');
 
-  if (top5LongTermPicks.length > 0) {
-    // STEP 6: Generate AI explanations for Top 5 Long-Term Picks only
-    const aiExplanations = await batchGenerateExplanations(
-      top5LongTermPicks.map(({ stock, scores }) => ({ stock, scores })),
-      process.env.GROQ_API_KEY
-    );
+  // 7. Atomic update in Convex
+  console.log("💾 Performing atomic database update (replaceAllStocks)...");
+  try {
+    const result = await client.mutation(api.mutations.replaceAllStocks, {
+      stocks: finalStocks as any // Type cast for Flexibilty with Convex schema
+    });
+    console.log(`✅ Success: ${result.deleted} deleted, ${result.inserted} inserted`);
 
-    // STEP 7: Update stocks with AI explanations
-    if (aiExplanations.size > 0) {
-      console.log(`💾 Storing ${aiExplanations.size} AI explanations in database...\n`);
+    // 8. Update Market Overview
+    const up = finalStocks.filter(s => s.priceChange > 0).length;
+    const down = finalStocks.filter(s => s.priceChange < 0).length;
+    await client.mutation(api.mutations.updateMarketOverview, {
+      totalStocks: finalStocks.length,
+      marketsUp: up,
+      marketsDown: down,
+      totalVolume: "Rs. " + (finalStocks.reduce((sum, s) => sum + (s.currentPrice * 10000), 0) / 1_000_000).toFixed(1) + "M",
+      lastUpdated: new Date().toLocaleDateString("en-LK"),
+    });
+    console.log("✅ Market overview updated");
 
-      for (const { stock, convexId } of top5LongTermPicks) {
-        const explanation = aiExplanations.get(stock.symbol);
-
-        if (explanation && convexId) {
-          try {
-            await client.mutation(api.mutations.updateStock, {
-              stockId: convexId,
-            });
-
-            // Now patch with AI explanation using upsertStock
-            await client.mutation(api.mutations.upsertStock, {
-              symbol: stock.symbol,
-              name: stock.name,
-              sector: stock.sector,
-              marketCap: stock.marketCap,
-              currentPrice: stock.currentPrice,
-              priceChange: stock.priceChange,
-              weekHigh52: stock.weekHigh52,
-              weekLow52: stock.weekLow52,
-              perfY: stock.perfY,
-              perf5Y: stock.perf5Y,
-              aiExplanation: {
-                ...explanation,
-                generatedAt: explanation.generatedAt || Date.now(),
-              },
-            });
-
-            console.log(`   ✅ Saved AI explanation for ${stock.symbol}`);
-          } catch (error) {
-            console.error(`   ❌ Failed to save AI explanation for ${stock.symbol}:`, error);
-          }
-        }
-      }
-
-      console.log(`\n✅ AI explanations stored successfully\n`);
-    }
-  } else {
-    console.log("ℹ️  No stocks found, skipping AI generation\n");
+  } catch (error) {
+    console.error("❌ Atomic update failed:", error);
+    process.exit(1);
   }
 
-  // STEP 5: Display summary
-  console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("📊 Summary");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-  // Count stocks by sector
-  const sectorCounts = discoveredStocks.reduce((acc, stock) => {
-    acc[stock.sector] = (acc[stock.sector] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  console.log(`✅ Total stocks: ${discoveredStocks.length}`);
-  console.log(`📈 Sectors represented: ${Object.keys(sectorCounts).length}`);
-
-  // Show top 5 sectors
-  const topSectors = Object.entries(sectorCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
-
-  console.log("\n🏆 Top sectors:");
-  for (const [sector, count] of topSectors) {
-    console.log(`   ${sector}: ${count} stocks`);
-  }
-
-  // Show top 5 by volume
-  const topByVolume = discoveredStocks
-    .sort((a, b) => b.volume - a.volume)
-    .slice(0, 5);
-
-  console.log("\n📊 Top 5 by trading volume:");
-  for (const stock of topByVolume) {
-    const changeStr = stock.priceChange >= 0
-      ? `+${stock.priceChange.toFixed(2)}%`
-      : `${stock.priceChange.toFixed(2)}%`;
-    const changeIcon = stock.priceChange >= 0 ? "🟢" : "🔴";
-    console.log(`   ${stock.symbol.padEnd(8)} Rs. ${stock.currentPrice.toFixed(2).padStart(8)} ${changeIcon} ${changeStr}`);
-  }
-
-  console.log(`\n⏱️  Completed at: ${new Date().toLocaleString("en-LK", { timeZone: "Asia/Colombo" })}`);
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
+  console.log("\n✨ Scraper execution completed successfully");
   process.exit(0);
 }
 

@@ -1,3 +1,5 @@
+import { getScoreColorClass } from '@/lib/scoring'
+
 interface ScoreBadgeProps {
   score: number
   label: string
@@ -8,22 +10,14 @@ interface ScoreBadgeProps {
 export default function ScoreBadge({ score, label, type, size = 'md' }: ScoreBadgeProps) {
   // Determine color based on score
   const getColorClasses = () => {
-    if (score >= 80) {
-      if (type === 'very-long-term') return 'bg-purple-500 text-white'
-      return type === 'long-term' 
-        ? 'bg-green-500 text-white'
-        : 'bg-red-500 text-white'
+    if (type === 'very-long-term') {
+      if (score >= 80) return 'bg-purple-600 text-white'
+      if (score >= 60) return 'bg-purple-500 text-white'
+      if (score >= 40) return 'bg-purple-400 text-white'
+      return 'bg-purple-300 text-white'
     }
-    if (score >= 60) {
-      if (type === 'very-long-term') return 'bg-purple-400 text-white'
-      return type === 'long-term'
-        ? 'bg-green-400 text-white'
-        : 'bg-red-400 text-white'
-    }
-    if (score >= 40) {
-      return 'bg-amber-400 text-white'
-    }
-    return 'bg-gray-400 text-white'
+    
+    return `${getScoreColorClass(score)} text-white`
   }
 
   // Size classes

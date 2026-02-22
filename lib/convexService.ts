@@ -3,7 +3,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { StockWithScores, MarketOverview, SectorData, FilterOptions, StockData, OHLCData } from "./types";
+import { StockWithScores, MarketOverview, SectorData, FilterOptions, StockData, OHLCData, StockScores } from "./types";
 import { calculateStockScores } from "./scoring";
 import { generateAIExplanation } from "./explanations";
 import { Doc, Id } from "../convex/_generated/dataModel";
@@ -21,6 +21,7 @@ type ConvexStock = Doc<"stocks"> & {
     keyConcerns: string[];
     generatedAt: number;
   };
+  scores?: StockScores;
 };
 
 /**
@@ -53,7 +54,10 @@ function transformConvexStock(stock: ConvexStock, index: number): StockData {
  * Uses stored AI explanation if available, otherwise falls back to template
  */
 function processStockData(stock: StockData, convexStock?: ConvexStock): StockWithScores {
-  const scores = calculateStockScores(stock);
+  // Use stored scores if available, otherwise calculate locally (fallback)
+  const scores = convexStock?.scores
+    ? (convexStock.scores as unknown as StockScores) // Direct cast from JSON store
+    : calculateStockScores(stock);
 
   // Use stored AI explanation if available, otherwise generate from template
   const explanation = convexStock?.aiExplanation

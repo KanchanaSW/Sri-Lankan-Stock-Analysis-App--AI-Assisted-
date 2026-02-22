@@ -22,6 +22,7 @@ export interface StockData {
   perf5Y?: number // 5-Year performance percentage
   perfY?: number  // 1-Year performance percentage
   historicalData: OHLCData[]
+  scores?: StockScores // Pre-computed scores from database
 }
 
 export interface SectorData {

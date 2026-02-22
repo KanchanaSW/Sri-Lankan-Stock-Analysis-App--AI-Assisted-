@@ -349,6 +349,78 @@ export function calculateStockScores(stock: StockData): StockScores {
   }
 }
 
+// ==================== SHARED UTILITIES ====================
+
+export function generateHistoricalData(
+  basePrice: number,
+  days: number = 90,
+  volatility: number = 0.02,
+  trend: number = 0.0002
+): OHLCData[] {
+  const data: OHLCData[] = [];
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  // Start price lower so trend leads to current price
+  let currentPrice = basePrice * 0.9;
+
+  for (let i = 0; i < days; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
+
+    // Skip weekends
+    if (date.getDay() === 0 || date.getDay() === 6) {
+      continue;
+    }
+
+    // Use a seeded random for reproducibility
+    const seedRandom = () => {
+      const x = Math.sin(i * 12.9898 + basePrice * 78.233) * 43758.5453;
+      return x - Math.floor(x);
+    };
+
+    // Add trend and random walk
+    const trendChange = trend * currentPrice;
+    const randomChange = (seedRandom() - 0.5) * volatility * currentPrice;
+    currentPrice = currentPrice + trendChange + randomChange;
+
+    // Generate OHLC
+    const dailyVolatility = volatility * currentPrice * 0.5;
+    const open = currentPrice + (seedRandom() - 0.5) * dailyVolatility;
+    const close = currentPrice + (seedRandom() - 0.5) * dailyVolatility;
+    const high = Math.max(open, close) + seedRandom() * dailyVolatility * 0.5;
+    const low = Math.min(open, close) - seedRandom() * dailyVolatility * 0.5;
+    const volume = Math.floor(
+      (500000 + seedRandom() * 1000000) * (1 + seedRandom() * 0.5)
+    );
+
+    data.push({
+      date: date.toISOString().split("T")[0],
+      open: Math.max(0.01, open),
+      high: Math.max(0.01, high),
+      low: Math.max(0.01, low),
+      close: Math.max(0.01, close),
+      volume,
+    });
+  }
+
+  return data;
+}
+
+export function getScoreColorClass(score: number): string {
+  if (score >= 80) return 'bg-green-500'
+  if (score >= 60) return 'bg-blue-500'
+  if (score >= 40) return 'bg-amber-500'
+  return 'bg-red-500'
+}
+
+export function getScoreTextColorClass(score: number): string {
+  if (score >= 80) return 'text-green-600'
+  if (score >= 60) return 'text-blue-600'
+  if (score >= 40) return 'text-amber-600'
+  return 'text-red-600'
+}
+
 // Export individual calculators for testing/debugging
 export {
   calculatePriceVolatility,

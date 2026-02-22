@@ -105,6 +105,7 @@ export const updateStock = mutation({
     priceChange: v.optional(v.number()),
     weekHigh52: v.optional(v.number()),
     weekLow52: v.optional(v.number()),
+    scores: v.optional(v.any()), // Using any for flexibility in updates
   },
   handler: async (ctx, args) => {
     const { stockId, ...updates } = args;
@@ -384,6 +385,17 @@ export const replaceAllStocks = mutation({
           keyConcerns: v.array(v.string()),
           generatedAt: v.number(),
         })),
+        scores: v.optional(v.any()),
+        historicalData: v.optional(v.array(
+          v.object({
+            date: v.string(),
+            open: v.number(),
+            high: v.number(),
+            low: v.number(),
+            close: v.number(),
+            volume: v.number(),
+          })
+        )),
       })
     ),
   },
@@ -411,33 +423,23 @@ export const replaceAllStocks = mutation({
     // Step 2: Insert new stocks with historical data
     const insertedIds: Id<"stocks">[] = [];
 
-    for (const stock of args.stocks) {
+    for (const stockObj of args.stocks) {
+      const { historicalData, ...stockData } = stockObj;
       const id = await ctx.db.insert("stocks", {
-        ...stock,
+        ...stockData,
         createdAt: now,
         updatedAt: now,
       });
       insertedIds.push(id);
 
-      // Generate and insert historical OHLC data for this stock
-      // Use price change to estimate volatility: higher change = higher volatility
-      const volatility = Math.min(0.05, Math.max(0.01, Math.abs(stock.priceChange) / 100 + 0.015));
-      // Use price change sign to determine trend direction
-      const trend = stock.priceChange >= 0 ? 0.0003 : -0.0001;
-
-      const historicalData = generateHistoricalData(
-        stock.currentPrice,
-        90, // 90 days of data
-        volatility,
-        trend
-      );
-
-      // Insert OHLC data for this stock
-      for (const ohlc of historicalData) {
-        await ctx.db.insert("ohlcData", {
-          stockId: id,
-          ...ohlc,
-        });
+      // Insert OHLC data if provided
+      if (historicalData) {
+        for (const ohlc of historicalData) {
+          await ctx.db.insert("ohlcData", {
+            stockId: id,
+            ...ohlc,
+          });
+        }
       }
     }
 
@@ -475,6 +477,7 @@ export const upsertStock = mutation({
       keyConcerns: v.array(v.string()),
       generatedAt: v.number(),
     })),
+    scores: v.optional(v.any()),
   },
   handler: async (ctx, args): Promise<Id<"stocks">> => {
     const now = Date.now();
@@ -500,9 +503,12 @@ export const upsertStock = mutation({
         updatedAt: now,
       };
 
-      // Include aiExplanation if provided
+      // Include aiExplanation and scores if provided
       if (args.aiExplanation) {
         updateData.aiExplanation = args.aiExplanation;
+      }
+      if (args.scores) {
+        updateData.scores = args.scores;
       }
 
       await ctx.db.patch(existing._id, updateData);

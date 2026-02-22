@@ -13,9 +13,10 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 - **Long-Term Analysis**: Find stable stocks suitable for long-term holding
 - **Short-Term Opportunities**: Identify high-momentum stocks for active trading
 - **AI-Assisted Insights**: Groq AI-powered analysis (Llama 3.3 70B) for top picks with context-aware explanations
-- **Interactive Charts**: Historical price and volume visualization (Recharts)
+- **Interactive Charts**: Historical price and volume visualization (Recharts) with **simulated historical data** for trend analysis
 - **Advanced Filtering**: Filter stocks by sector, investment type, and market cap
-- **Automated Updates**: Daily stock list and price updates via GitHub Actions
+- **Performance Optimized**: Pre-computed scoring and data processing performed server-side for instant page loads
+- **Atomic Updates**: Robust data scraping with single-transaction database updates via GitHub Actions
 
 ## 🛠️ Tech Stack
 
@@ -26,7 +27,7 @@ A web-based platform that analyzes Colombo Stock Exchange (CSE) data and present
 | **Backend** | Convex (Real-time database) |
 | **AI Analysis** | Groq API (Llama 3.3 70B) |
 | **Charts** | Recharts |
-| **Data Source** | TradingView Scanner API |
+| **Data Source** | TradingView Scanner API (Live prices + Simulated OHLC) |
 | **Hosting** | Netlify |
 | **Automation** | GitHub Actions (Daily scraper) |
 
@@ -195,14 +196,13 @@ The **Top 5 Long-Term Picks** shown on the home page receive enhanced AI-generat
 
 ## 🔄 Automated Updates
 
-The scraper runs automatically via GitHub Actions:
+The scraper runs automatically via GitHub Actions ensuring high data integrity:
 - **Schedule**: Daily at 3:00 PM Sri Lanka time (weekdays)
 - **Process**: 
-  1. Discovers top 50 most profitable stocks (by net income)
-  2. Fetches latest metrics (Price, 52W High/Low, Historical OHLC)
-  3. Calculates all three scores
-  4. Generates AI analysis for top picks
-  5. Updates Convex database
+  1. **Discovery**: Identifies top 50 most profitable stocks (by net income)
+  2. **In-Memory Transformation**: Generates historical OHLC data and calculates all three scores locally
+  3. **AI Generation**: Fetches Groq AI analysis for top picks
+  4. **Atomic Update**: Performs a single `replaceAllStocks` transaction in Convex to avoid data inconsistencies
 - **Manual trigger**: `npm run scrape`
 
 ## 🚀 Deployment
@@ -218,6 +218,8 @@ Add repository secrets:
 - `GROQ_API_KEY` (Required for AI generation)
 
 ## ⚠️ Disclaimer
+
+**Data Simulation Notice**: Historical price and volume charts on this platform are computationally generated using mathematical volatility models based on current market metrics. They do not represent exact historical CSE records and are intended for trend visualization and educational purposes only.
 
 This platform provides stock market analysis for **educational purposes only** and does not constitute financial or investment advice. Always consult with a qualified financial advisor before making investment decisions.
 

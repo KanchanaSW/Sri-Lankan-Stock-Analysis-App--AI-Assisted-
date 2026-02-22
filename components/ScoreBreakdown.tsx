@@ -1,4 +1,5 @@
 import { ScoreFactors, MomentumFactors, VeryLongTermFactors } from '@/lib/types'
+import { getScoreColorClass, getScoreTextColorClass } from '@/lib/scoring'
 
 interface ScoreBreakdownProps {
   type: 'very-long-term' | 'long-term' | 'short-term'
@@ -34,17 +35,21 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
   const factorConfig: Record<string, FactorWeight> = type === 'very-long-term' ? veryLongTermFactorWeights : type === 'long-term' ? longTermFactorWeights : shortTermFactorWeights
 
   const getColorClass = (score: number) => {
-    if (score >= 80) return 'bg-green-500'
-    if (score >= 60) return 'bg-blue-500'
-    if (score >= 40) return 'bg-amber-500'
-    return 'bg-red-500'
+    if (type === 'very-long-term') {
+      if (score >= 80) return 'bg-purple-600'
+      if (score >= 60) return 'bg-purple-500'
+      if (score >= 40) return 'bg-purple-400'
+      return 'bg-purple-300'
+    }
+    return getScoreColorClass(score)
   }
 
   const getTextColorClass = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-blue-600'
-    if (score >= 40) return 'text-amber-600'
-    return 'text-red-600'
+    if (type === 'very-long-term') {
+      if (score >= 60) return 'text-purple-600'
+      return 'text-purple-400'
+    }
+    return getScoreTextColorClass(score)
   }
 
   return (
