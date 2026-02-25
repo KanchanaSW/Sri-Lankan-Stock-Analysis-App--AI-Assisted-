@@ -53,8 +53,8 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
-      <h3 className="mb-4">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
+      <h3 className="mb-4 text-gray-900 dark:text-white">
         {type === 'very-long-term' ? 'Very Long-Term (Buy & Hold)' : type === 'long-term' ? 'Long-Term Stability' : 'Short-Term Momentum'} Factor Breakdown
       </h3>
       
@@ -67,10 +67,10 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
             <div key={key}>
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {config.label}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     ({config.weight}% weight)
                   </span>
                 </div>
@@ -80,7 +80,7 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
               </div>
               
               {/* Progress bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all duration-500 ${getColorClass(value)}`}
                   style={{ width: `${value}%` }}
@@ -92,8 +92,8 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
       </div>
 
       {/* Legend */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+        <div className="flex flex-wrap gap-4 text-xs text-gray-600 dark:text-gray-400">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 bg-green-500 rounded"></div>
             <span>Excellent (80+)</span>

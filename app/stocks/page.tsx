@@ -45,7 +45,7 @@ export default function StocksPage() {
           {/* Back Button */}
           <button
             onClick={() => router.back()}
-            className="mb-6 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            className="mb-6 inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors group"
           >
             <svg 
               className="w-5 h-5 transition-transform group-hover:-translate-x-1" 
@@ -58,20 +58,20 @@ export default function StocksPage() {
             <span className="font-medium">Back</span>
           </button>
 
-          <h1 className="mb-8">All Stocks</h1>
+          <h1 className="mb-8 text-gray-900 dark:text-white">All Stocks</h1>
           
           {/* Filters */}
-          <div className="bg-white p-6 rounded-lg border border-gray-200 mb-8">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Sector Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Sector
                 </label>
                 <select
                   value={selectedSector}
                   onChange={(e) => setSelectedSector(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {availableSectors.map(sector => (
                     <option key={sector} value={sector}>{sector}</option>
@@ -81,13 +81,13 @@ export default function StocksPage() {
 
               {/* Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Investment Type
                 </label>
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value as InvestmentType)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All Stocks</option>
                   <option value="long-term">Long-Term (Score ≥ 70)</option>
@@ -97,13 +97,13 @@ export default function StocksPage() {
 
               {/* Market Cap Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Market Cap
                 </label>
                 <select
                   value={selectedMarketCapRange}
                   onChange={(e) => setSelectedMarketCapRange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {marketCapRanges.map(range => (
                     <option key={range.label} value={range.label}>{range.label}</option>
@@ -113,13 +113,13 @@ export default function StocksPage() {
 
               {/* Sort By */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Sort By
                 </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="long-term">Long-Term Score</option>
                   <option value="short-term">Short-Term Score</option>
@@ -131,7 +131,7 @@ export default function StocksPage() {
           </div>
 
           {/* Results */}
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Showing {filteredStocks.length} stocks
           </p>
 
@@ -154,7 +154,7 @@ export default function StocksPage() {
 
               {filteredStocks.length === 0 && (
                 <div className="text-center py-12">
-                  <p className="text-gray-500">No stocks found matching your filters.</p>
+                  <p className="text-gray-500 dark:text-gray-400">No stocks found matching your filters.</p>
                 </div>
               )}
             </>

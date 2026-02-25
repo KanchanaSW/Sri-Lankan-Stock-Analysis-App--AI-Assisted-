@@ -11,10 +11,10 @@ export default function ScoreBadge({ score, label, type, size = 'md' }: ScoreBad
   // Determine color based on score
   const getColorClasses = () => {
     if (type === 'very-long-term') {
-      if (score >= 80) return 'bg-purple-600 text-white'
-      if (score >= 60) return 'bg-purple-500 text-white'
-      if (score >= 40) return 'bg-purple-400 text-white'
-      return 'bg-purple-300 text-white'
+      if (score >= 80) return 'bg-purple-600 dark:bg-purple-500 text-white'
+      if (score >= 60) return 'bg-purple-500 dark:bg-purple-600 text-white'
+      if (score >= 40) return 'bg-purple-400 dark:bg-purple-700 text-white'
+      return 'bg-purple-300 dark:bg-purple-800 text-white font-medium'
     }
     
     return `${getScoreColorClass(score)} text-white`

@@ -415,10 +415,10 @@ export function getScoreColorClass(score: number): string {
 }
 
 export function getScoreTextColorClass(score: number): string {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-blue-600'
-  if (score >= 40) return 'text-amber-600'
-  return 'text-red-600'
+  if (score >= 80) return 'text-green-600 dark:text-green-400'
+  if (score >= 60) return 'text-blue-600 dark:text-blue-400'
+  if (score >= 40) return 'text-amber-600 dark:text-amber-400'
+  return 'text-red-600 dark:text-red-400'
 }
 
 // Export individual calculators for testing/debugging

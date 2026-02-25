@@ -26,11 +26,11 @@ export default function Home() {
   if (!overview && !overviewLoading) {
     return (
       <div className="container-custom py-12">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-red-900 font-semibold mb-2">Convex Not Configured</h3>
-          <p className="text-red-700 mb-4">
-            Please run <code className="bg-red-100 px-2 py-1 rounded">npx convex dev</code> to set up your Convex backend,
-            then run <code className="bg-red-100 px-2 py-1 rounded">npm run seed</code> to populate initial data.
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-6">
+          <h3 className="text-red-900 dark:text-red-400 font-semibold mb-2">Convex Not Configured</h3>
+          <p className="text-red-700 dark:text-red-300 mb-4">
+            Please run <code className="bg-red-100 dark:bg-red-900/40 px-2 py-1 rounded text-red-900 dark:text-red-200">npx convex dev</code> to set up your Convex backend,
+            then run <code className="bg-red-100 dark:bg-red-900/40 px-2 py-1 rounded text-red-900 dark:text-red-200">npm run seed</code> to populate initial data.
           </p>
         </div>
       </div>
@@ -42,60 +42,60 @@ export default function Home() {
       <DisclaimerBanner />
       
       {/* Market Overview */}
-      <section className="bg-gray-50 py-12">
+      <section className="bg-gray-50 dark:bg-gray-900/50 py-12">
         <div className="container-custom">
-          <h2 className="mb-6">Market Overview</h2>
+          <h2 className="mb-6 text-gray-900 dark:text-white">Market Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">Total Stocks</p>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Stocks</p>
               {isLoading ? (
-                <div className="h-9 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
-                <p className="text-3xl font-bold text-gray-900">{overview?.totalStocks ?? 0}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{overview?.totalStocks ?? 0}</p>
               )}
             </div>
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">Gainers</p>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Gainers</p>
               {isLoading ? (
-                <div className="h-9 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
-                <p className="text-3xl font-bold text-green-600">{overview?.marketsUp ?? 0}</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">{overview?.marketsUp ?? 0}</p>
               )}
             </div>
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">Losers</p>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Losers</p>
               {isLoading ? (
-                <div className="h-9 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
-                <p className="text-3xl font-bold text-red-600">{overview?.marketsDown ?? 0}</p>
+                <p className="text-3xl font-bold text-red-600 dark:text-red-400">{overview?.marketsDown ?? 0}</p>
               )}
             </div>
-            <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">Volume</p>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Volume</p>
               {isLoading ? (
-                <div className="h-9 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
-                <p className="text-3xl font-bold text-gray-900">{overview?.totalVolume ?? 'N/A'}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{overview?.totalVolume ?? 'N/A'}</p>
               )}
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-4">Last updated: {overview?.lastUpdated ?? 'N/A'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Last updated: {overview?.lastUpdated ?? 'N/A'}</p>
         </div>
       </section>
 
       {/* Very Long-Term Picks */}
-      <section className="bg-purple-50 py-12">
+      <section className="bg-purple-50 dark:bg-purple-900/10 py-12">
         <div className="container-custom">
           <div className="mb-6">
-            <h2 className="mb-2 text-purple-900">Top Very Long-Term Picks (Buy & Hold)</h2>
-            <p className="text-purple-700">Exceptional 5-year stability and returns, ideal for multi-year holding • Automatically updated every Monday</p>
+            <h2 className="mb-2 text-purple-900 dark:text-purple-300">Top Very Long-Term Picks (Buy & Hold)</h2>
+            <p className="text-purple-700 dark:text-purple-400">Exceptional 5-year stability and returns, ideal for multi-year holding • Automatically updated every Monday</p>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               <LoadingSkeleton type="card" count={5} />
             </div>
           ) : topVeryLongTerm.length === 0 ? (
-            <div className="text-center py-12 text-purple-500">
+            <div className="text-center py-12 text-purple-500 dark:text-purple-400">
               No stocks available. Please seed the database first.
             </div>
           ) : (
@@ -134,18 +134,18 @@ export default function Home() {
       </section>
 
       {/* Short-Term Opportunities */}
-      <section className="bg-gray-50 py-12">
+      <section className="bg-gray-50 dark:bg-gray-900/50 py-12">
         <div className="container-custom">
           <div className="mb-6">
-            <h2 className="mb-2">Top Short-Term Opportunities</h2>
-            <p className="text-gray-600">High-momentum stocks showing strong recent performance</p>
+            <h2 className="mb-2 text-gray-900 dark:text-white">Top Short-Term Opportunities</h2>
+            <p className="text-gray-600 dark:text-gray-400">High-momentum stocks showing strong recent performance</p>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               <LoadingSkeleton type="card" count={5} />
             </div>
           ) : topShortTerm.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               No stocks available. Please seed the database first.
             </div>
           ) : (

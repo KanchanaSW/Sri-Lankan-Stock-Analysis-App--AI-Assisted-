@@ -8,11 +8,11 @@ export default function RiskIndicator({ level, showIcon = true, size = 'md' }: R
   const getColorClasses = () => {
     switch (level) {
       case 'Low':
-        return 'bg-green-100 text-green-700 border-green-200'
+        return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50'
       case 'Medium':
-        return 'bg-amber-100 text-amber-700 border-amber-200'
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'
       case 'High':
-        return 'bg-red-100 text-red-700 border-red-200'
+        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50'
     }
   }
 
