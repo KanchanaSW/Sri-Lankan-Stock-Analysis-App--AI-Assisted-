@@ -1,3 +1,6 @@
+'use client'
+
+import { motion, type Variants } from 'framer-motion'
 import { ScoreFactors, MomentumFactors, VeryLongTermFactors } from '@/lib/types'
 import { getScoreColorClass, getScoreTextColorClass } from '@/lib/scoring'
 
@@ -7,6 +10,16 @@ interface ScoreBreakdownProps {
 }
 
 type FactorWeight = { weight: number; label: string }
+
+const containerVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1 } },
+}
+
+const rowVariants: Variants = {
+  hidden: { opacity: 0, x: -16 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.35 } },
+}
 
 export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
   const longTermFactorWeights: Record<keyof ScoreFactors, FactorWeight> = {
@@ -58,13 +71,19 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
         {type === 'very-long-term' ? 'Very Long-Term (Buy & Hold)' : type === 'long-term' ? 'Long-Term Stability' : 'Short-Term Momentum'} Factor Breakdown
       </h3>
       
-      <div className="space-y-4">
+      <motion.div
+        className="space-y-4"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+      >
         {Object.entries(factors).map(([key, value]) => {
           const config = factorConfig[key as keyof typeof factorConfig]
           if (!config) return null
 
           return (
-            <div key={key}>
+            <motion.div key={key} variants={rowVariants}>
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -79,17 +98,20 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
                 </span>
               </div>
               
-              {/* Progress bar */}
+              {/* Animated progress bar */}
               <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all duration-500 ${getColorClass(value)}`}
-                  style={{ width: `${value}%` }}
+                <motion.div
+                  className={`h-2 rounded-full ${getColorClass(value)}`}
+                  initial={{ width: '0%' }}
+                  whileInView={{ width: `${value}%` }}
+                  viewport={{ once: true, amount: 0.5 }}
+                  transition={{ duration: 0.8, delay: 0.1 }}
                 />
               </div>
-            </div>
+            </motion.div>
           )
         })}
-      </div>
+      </motion.div>
 
       {/* Legend */}
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">

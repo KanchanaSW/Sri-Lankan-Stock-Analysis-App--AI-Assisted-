@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { motion, type Variants } from 'framer-motion'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import RiskIndicator from '@/components/RiskIndicator'
 import ScoreBreakdown from '@/components/ScoreBreakdown'
@@ -9,6 +10,26 @@ import VolumeChart from '@/components/charts/VolumeChart'
 import LoadingSkeleton from '@/components/LoadingSkeleton'
 import { useStockById } from '@/lib/convexService'
 import { formatMarketCap } from '@/lib/stockService'
+
+const pageVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+}
+
+const scoreCardContainerVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12 } },
+}
+
+const scoreCardVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.9, x: -16 },
+  visible: { opacity: 1, scale: 1, x: 0, transition: { duration: 0.4 } },
+}
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+}
 
 export default function StockDetailPage() {
   const params = useParams()
@@ -58,15 +79,18 @@ export default function StockDetailPage() {
   const { scores, explanation } = stock
 
   return (
-    <div>
+    <motion.div variants={pageVariants} initial="hidden" animate="visible">
       <DisclaimerBanner />
       
       <section className="py-12">
         <div className="container-custom">
           {/* Back Button */}
-          <button
+          <motion.button
             onClick={() => router.back()}
             className="mb-6 inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors group"
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35 }}
           >
             <svg 
               className="w-5 h-5 transition-transform group-hover:-translate-x-1" 
@@ -77,10 +101,15 @@ export default function StockDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             <span className="font-medium">Back</span>
-          </button>
+          </motion.button>
 
           {/* Stock Header */}
-          <div className="mb-8">
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.45 }}
+          >
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h1 className="mb-2 text-gray-900 dark:text-white">{stock.symbol}</h1>
@@ -102,37 +131,81 @@ export default function StockDetailPage() {
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Scores & Risk */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-lg p-6">
+          {/* Scores & Risk — staggered */}
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+            variants={scoreCardContainerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.div
+              variants={scoreCardVariants}
+              className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-lg p-6"
+            >
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Very Long-Term Score</p>
-              <p className="text-5xl font-bold text-purple-600 dark:text-purple-400">{scores.veryLongTermScore}</p>
+              <motion.p
+                className="text-5xl font-bold text-purple-600 dark:text-purple-400"
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 260, damping: 20 }}
+              >
+                {scores.veryLongTermScore}
+              </motion.p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Out of 100</p>
-            </div>
+            </motion.div>
 
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-lg p-6">
+            <motion.div
+              variants={scoreCardVariants}
+              className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-lg p-6"
+            >
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Long-Term Stability Score</p>
-              <p className="text-5xl font-bold text-green-600 dark:text-green-400">{scores.longTermScore}</p>
+              <motion.p
+                className="text-5xl font-bold text-green-600 dark:text-green-400"
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.42, type: 'spring', stiffness: 260, damping: 20 }}
+              >
+                {scores.longTermScore}
+              </motion.p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Out of 100</p>
-            </div>
+            </motion.div>
             
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-6">
+            <motion.div
+              variants={scoreCardVariants}
+              className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-6"
+            >
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Short-Term Momentum Score</p>
-              <p className="text-5xl font-bold text-red-600 dark:text-red-400">{scores.shortTermScore}</p>
+              <motion.p
+                className="text-5xl font-bold text-red-600 dark:text-red-400"
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.54, type: 'spring', stiffness: 260, damping: 20 }}
+              >
+                {scores.shortTermScore}
+              </motion.p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Out of 100</p>
-            </div>
+            </motion.div>
 
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 flex flex-col justify-center shadow-sm">
+            <motion.div
+              variants={scoreCardVariants}
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 flex flex-col justify-center shadow-sm"
+            >
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 font-medium">Risk Assessment</p>
               <RiskIndicator level={explanation.riskLevel} size="lg" />
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-3">{explanation.riskReasoning}</p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* AI-Generated Explanation */}
-          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-lg p-6 mb-8 shadow-sm">
+          <motion.div
+            className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-lg p-6 mb-8 shadow-sm"
+            variants={sectionVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.15 }}
+          >
             <h3 className="mb-3 text-blue-900 dark:text-blue-300">AI-Assisted Analysis</h3>
             <div className="space-y-4">
               <div>
@@ -162,10 +235,17 @@ export default function StockDetailPage() {
                   <h4 className="text-sm font-semibold text-green-700 dark:text-green-400 mb-2">Key Strengths</h4>
                   <ul className="space-y-1">
                     {explanation.keyStrengths.map((strength, idx) => (
-                      <li key={idx} className="text-sm text-gray-700 dark:text-gray-400 flex items-start gap-2">
+                      <motion.li
+                        key={idx}
+                        className="text-sm text-gray-700 dark:text-gray-400 flex items-start gap-2"
+                        initial={{ opacity: 0, x: -10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: idx * 0.08, duration: 0.3 }}
+                      >
                         <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
                         <span>{strength}</span>
-                      </li>
+                      </motion.li>
                     ))}
                   </ul>
                 </div>
@@ -174,43 +254,67 @@ export default function StockDetailPage() {
                   <h4 className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2">Key Concerns</h4>
                   <ul className="space-y-1">
                     {explanation.keyConcerns.map((concern, idx) => (
-                      <li key={idx} className="text-sm text-gray-700 dark:text-gray-400 flex items-start gap-2">
+                      <motion.li
+                        key={idx}
+                        className="text-sm text-gray-700 dark:text-gray-400 flex items-start gap-2"
+                        initial={{ opacity: 0, x: -10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: idx * 0.08, duration: 0.3 }}
+                      >
                         <span className="text-amber-600 dark:text-amber-400 mt-0.5">⚠</span>
                         <span>{concern}</span>
-                      </li>
+                      </motion.li>
                     ))}
                   </ul>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Score Breakdowns */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <motion.div
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8"
+            variants={sectionVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+          >
             <ScoreBreakdown type="very-long-term" factors={scores.veryLongTermFactors} />
             <ScoreBreakdown type="long-term" factors={scores.longTermFactors} />
             <ScoreBreakdown type="short-term" factors={scores.shortTermFactors} />
-          </div>
+          </motion.div>
 
           {/* Price Chart */}
-          <div className="mb-6">
+          <motion.div
+            className="mb-6"
+            variants={sectionVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+          >
             <PriceChart 
               data={stock.historicalData} 
               title={`${stock.symbol} Price History (${stock.historicalData.length} days)`}
               height={350}
             />
-          </div>
+          </motion.div>
 
           {/* Volume Chart */}
-          <div>
+          <motion.div
+            variants={sectionVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+          >
             <VolumeChart 
               data={stock.historicalData} 
               title={`${stock.symbol} Trading Volume (${stock.historicalData.length} days)`}
               height={350}
             />
-          </div>
+          </motion.div>
         </div>
       </section>
-    </div>
+    </motion.div>
   )
 }

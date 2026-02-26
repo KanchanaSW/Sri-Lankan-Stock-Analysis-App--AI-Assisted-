@@ -1,5 +1,6 @@
 'use client'
 
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import StockCard from '@/components/StockCard'
 import LoadingSkeleton from '@/components/LoadingSkeleton'
@@ -10,6 +11,21 @@ import {
   getTopShortTermStocksClient,
   getTopVeryLongTermStocksClient
 } from '@/lib/convexService'
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+}
+
+const statContainerVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1 } },
+}
+
+const statItemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
 
 export default function Home() {
   const { stocks, isLoading: stocksLoading } = useAllStocks();
@@ -42,49 +58,67 @@ export default function Home() {
       <DisclaimerBanner />
       
       {/* Market Overview */}
-      <section className="bg-gray-50 dark:bg-gray-900/50 py-12">
+      <motion.section
+        className="bg-gray-50 dark:bg-gray-900/50 py-12"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
         <div className="container-custom">
           <h2 className="mb-6 text-gray-900 dark:text-white">Market Overview</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+          <motion.div
+            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+            variants={statContainerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <motion.div variants={statItemVariants} className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Stocks</p>
               {isLoading ? (
                 <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">{overview?.totalStocks ?? 0}</p>
               )}
-            </div>
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+            </motion.div>
+            <motion.div variants={statItemVariants} className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Gainers</p>
               {isLoading ? (
                 <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
                 <p className="text-3xl font-bold text-green-600 dark:text-green-400">{overview?.marketsUp ?? 0}</p>
               )}
-            </div>
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+            </motion.div>
+            <motion.div variants={statItemVariants} className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Losers</p>
               {isLoading ? (
                 <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
                 <p className="text-3xl font-bold text-red-600 dark:text-red-400">{overview?.marketsDown ?? 0}</p>
               )}
-            </div>
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+            </motion.div>
+            <motion.div variants={statItemVariants} className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Volume</p>
               {isLoading ? (
                 <div className="h-9 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
               ) : (
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">{overview?.totalVolume ?? 'N/A'}</p>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Last updated: {overview?.lastUpdated ?? 'N/A'}</p>
         </div>
-      </section>
+      </motion.section>
 
       {/* Very Long-Term Picks */}
-      <section className="bg-purple-50 dark:bg-purple-900/10 py-12">
+      <motion.section
+        className="bg-purple-50 dark:bg-purple-900/10 py-12"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
         <div className="container-custom">
           <div className="mb-6">
             <h2 className="mb-2 text-purple-900 dark:text-purple-300">Top Very Long-Term Picks (Buy & Hold)</h2>
@@ -99,17 +133,25 @@ export default function Home() {
               No stocks available. Please seed the database first.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {topVeryLongTerm.map((stock) => (
-                <StockCard key={stock.id} stock={stock} type="very-long-term" showExplanation={true} />
-              ))}
-            </div>
+            <AnimatePresence mode="popLayout">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {topVeryLongTerm.map((stock, i) => (
+                  <StockCard key={stock.id} stock={stock} type="very-long-term" showExplanation={true} index={i} />
+                ))}
+              </div>
+            </AnimatePresence>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* Long-Term Picks */}
-      <section className="py-12">
+      <motion.section
+        className="py-12"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
         <div className="container-custom">
           <div className="mb-6">
             <h2 className="mb-2">Top Long-Term Picks</h2>
@@ -124,17 +166,25 @@ export default function Home() {
               No stocks available. Please seed the database first.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {topLongTerm.map((stock) => (
-                <StockCard key={stock.id} stock={stock} type="long-term" showExplanation={true} />
-              ))}
-            </div>
+            <AnimatePresence mode="popLayout">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {topLongTerm.map((stock, i) => (
+                  <StockCard key={stock.id} stock={stock} type="long-term" showExplanation={true} index={i} />
+                ))}
+              </div>
+            </AnimatePresence>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* Short-Term Opportunities */}
-      <section className="bg-gray-50 dark:bg-gray-900/50 py-12">
+      <motion.section
+        className="bg-gray-50 dark:bg-gray-900/50 py-12"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
         <div className="container-custom">
           <div className="mb-6">
             <h2 className="mb-2 text-gray-900 dark:text-white">Top Short-Term Opportunities</h2>
@@ -149,14 +199,16 @@ export default function Home() {
               No stocks available. Please seed the database first.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {topShortTerm.map((stock) => (
-                <StockCard key={stock.id} stock={stock} type="short-term" showExplanation={true} />
-              ))}
-            </div>
+            <AnimatePresence mode="popLayout">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {topShortTerm.map((stock, i) => (
+                  <StockCard key={stock.id} stock={stock} type="short-term" showExplanation={true} index={i} />
+                ))}
+              </div>
+            </AnimatePresence>
           )}
         </div>
-      </section>
+      </motion.section>
     </div>
   )
 }

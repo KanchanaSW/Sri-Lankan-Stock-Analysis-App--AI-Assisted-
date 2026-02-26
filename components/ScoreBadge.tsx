@@ -1,3 +1,6 @@
+'use client'
+
+import { motion } from 'framer-motion'
 import { getScoreColorClass } from '@/lib/scoring'
 
 interface ScoreBadgeProps {
@@ -34,9 +37,21 @@ export default function ScoreBadge({ score, label, type, size = 'md' }: ScoreBad
   }
 
   return (
-    <div className={`inline-flex flex-col items-center rounded-lg ${getColorClasses()} ${sizeClasses[size]} font-semibold`}>
-      <span className={`${scoreSizeClasses[size]} font-bold`}>{score}</span>
+    <motion.div
+      className={`inline-flex flex-col items-center rounded-lg ${getColorClasses()} ${sizeClasses[size]} font-semibold`}
+      initial={{ scale: 0.5, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+    >
+      <motion.span
+        className={`${scoreSizeClasses[size]} font-bold`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15 }}
+      >
+        {score}
+      </motion.span>
       <span className="text-xs opacity-90">{label}</span>
-    </div>
+    </motion.div>
   )
 }
