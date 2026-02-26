@@ -3,6 +3,8 @@
 import { motion, type Variants } from 'framer-motion'
 import { ScoreFactors, MomentumFactors, VeryLongTermFactors } from '@/lib/types'
 import { getScoreColorClass, getScoreTextColorClass } from '@/lib/scoring'
+import Tooltip from './Tooltip'
+import { getFactorTooltip } from '@/lib/tooltipContent'
 
 interface ScoreBreakdownProps {
   type: 'very-long-term' | 'long-term' | 'short-term'
@@ -85,13 +87,16 @@ export default function ScoreBreakdown({ type, factors }: ScoreBreakdownProps) {
           return (
             <motion.div key={key} variants={rowVariants}>
               <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {config.label}
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     ({config.weight}% weight)
                   </span>
+                  {getFactorTooltip(type, key) && (
+                    <Tooltip content={getFactorTooltip(type, key)!} size="xs" />
+                  )}
                 </div>
                 <span className={`text-sm font-semibold ${getTextColorClass(value)}`}>
                   {value}/100

@@ -2,6 +2,8 @@
 
 import { motion } from 'framer-motion'
 import { getScoreColorClass } from '@/lib/scoring'
+import Tooltip from './Tooltip'
+import { overallScoreTooltips } from '@/lib/tooltipContent'
 
 interface ScoreBadgeProps {
   score: number
@@ -51,7 +53,12 @@ export default function ScoreBadge({ score, label, type, size = 'md' }: ScoreBad
       >
         {score}
       </motion.span>
-      <span className="text-xs opacity-90">{label}</span>
+      <div className="flex items-center gap-1 text-xs opacity-90">
+        <span>{label}</span>
+        {overallScoreTooltips[type] && (
+          <Tooltip content={overallScoreTooltips[type]} size="xs" />
+        )}
+      </div>
     </motion.div>
   )
 }
