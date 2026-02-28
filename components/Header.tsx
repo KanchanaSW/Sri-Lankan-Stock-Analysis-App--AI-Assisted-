@@ -36,6 +36,9 @@ export default function Header() {
               <Link href="/stocks" className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                 All Stocks
               </Link>
+              <Link href="/screener" className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                Screener
+              </Link>
               <Link href="/compare" className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                 Compare
               </Link>
