@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as cache from "../cache.js";
 import type * as crons from "../crons.js";
 import type * as mutations from "../mutations.js";
 import type * as queries from "../queries.js";
@@ -22,6 +23,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  cache: typeof cache;
   crons: typeof crons;
   mutations: typeof mutations;
   queries: typeof queries;

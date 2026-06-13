@@ -209,6 +209,48 @@ The app uses **Convex Cron Jobs** for fully automated data refreshes:
 - **Benefits**: Zero external dependencies and preserved AI history across runs.
 - **Manual trigger**: `npx convex run scraper:runScrape '{ "tier": "very-long-term" }'`
 
+## TTL Cache Strategy
+
+The app uses a **Convex-backed TTL cache** (`cacheEntries` table) to reduce TradingView API calls, Groq AI costs, repeated score calculations, and simulated chart regeneration. Caching is a product decision: different data types have different freshness requirements.
+
+### Why TTL Caching
+
+- **Cost control**: Groq and TradingView calls are expensive; cache hits avoid redundant requests.
+- **Speed**: Precomputed scores, charts, and AI analysis return instantly from cache during scraper runs.
+- **Freshness rules**: Live prices need short TTLs; AI insights can be reused longer because they are analysis, not live quotes.
+
+### What Is Cached
+
+| Cache Type | Key Example | TTL |
+|------------|-------------|-----|
+| Live stock price | `live_price:JKH.N0000` | 10 minutes |
+| Market overview | `market_overview:cse` | 30 minutes |
+| Stock discovery (top 50) | `stock_discovery:top50:net_income` | 24 hours |
+| AI analysis | `ai_analysis:JKH.N0000:very_long_term:score_92:prompt_v1` | 7 days (VLT) / 24h (LT) / 6h (ST) |
+| Stock scores | `stock_score:JKH.N0000:long_term` | 24 hours (LT/VLT) / 3 hours (ST) |
+| Simulated chart data | `chart_data:JKH.N0000:1y:simulated` | 24 hours |
+| Sector/metadata | `metadata:sectors` | 7 days |
+
+TTL constants live in [`lib/config.ts`](lib/config.ts) as `CACHE_TTL`. AI cache keys include `AI_PROMPT_VERSION` so prompt changes automatically invalidate old entries.
+
+### Cache Invalidation
+
+- **Daily price scrape**: Refreshes `live_price:{symbol}`, `market_overview:cse`, and invalidates `stock_score:{symbol}:short_term`.
+- **Weekly discovery (very-long-term)**: Invalidates `stock_discovery:top50:net_income` and score caches.
+- **Prompt version bump**: Old AI cache keys no longer match.
+
+### Stale Fallback
+
+When TradingView or Groq fails, the scraper returns recently expired cache entries (up to 2× the original TTL) where safe. If no cache exists, Groq failures fall back to template-based explanations from [`lib/explanations.ts`](lib/explanations.ts).
+
+### Manual Cache Cleanup
+
+Expired entries are removed daily by a Convex cron job. To run manually:
+
+```bash
+npx convex run cache:clearExpiredCache
+```
+
 ## 🚀 Deployment
 
 ### Netlify (Frontend)

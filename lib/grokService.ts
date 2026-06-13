@@ -1,8 +1,16 @@
 import { AIExplanation, StockScores, StockData } from './types';
+import { CACHE_TTL } from './config';
+import {
+  aiAnalysisKey,
+  analysisTierToAiTtlKey,
+  type AnalysisTier,
+} from './cacheKeys';
+import { logCacheEvent } from './cacheLog';
+import type { CacheClient } from './cacheOrchestration';
 
 // Groq API configuration (fast LLM inference with generous free tier)
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile'; // Fast, high-quality, free tier friendly
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 interface GroqResponse {
   choices: Array<{
@@ -12,24 +20,53 @@ interface GroqResponse {
   }>;
 }
 
+export interface GrokGenerationOptions {
+  cacheClient?: CacheClient;
+  tier?: AnalysisTier;
+}
+
+function getTierScore(scores: StockScores, tier: AnalysisTier): number {
+  if (tier === 'very-long-term') return scores.veryLongTermScore;
+  if (tier === 'short-term') return scores.shortTermScore;
+  return scores.longTermScore;
+}
+
 /**
- * Generate AI explanation using Groq API
- * Only called for Long-Term Pick stocks (longTermScore >= 70)
+ * Generate AI explanation using Groq API with optional TTL cache
  */
 export async function generateGrokExplanation(
   stock: StockData,
   scores: StockScores,
-  apiKey?: string
+  apiKey?: string,
+  options?: GrokGenerationOptions
 ): Promise<AIExplanation | null> {
-  // Check if API key is available
+  const tier = options?.tier ?? 'long-term';
+  const cacheClient = options?.cacheClient;
+  const tierScore = getTierScore(scores, tier);
+  const cacheKey = aiAnalysisKey(stock.symbol, tier, tierScore);
+  const ttl = CACHE_TTL[analysisTierToAiTtlKey(tier)];
+
+  if (cacheClient) {
+    const cached = await cacheClient.get(cacheKey);
+    if (cached?.status === 'hit') {
+      return cached.value as AIExplanation;
+    }
+  }
+
   const key = apiKey || process.env.GROQ_API_KEY;
 
   if (!key) {
     console.warn(`⚠️  No GROQ_API_KEY found for ${stock.symbol}, skipping AI generation`);
+    if (cacheClient) {
+      const stale = await cacheClient.get(cacheKey, { allowStale: true });
+      if (stale) {
+        logCacheEvent('CACHE_FALLBACK_STALE', { key: cacheKey, type: 'ai_analysis' });
+        return stale.value as AIExplanation;
+      }
+    }
     return null;
   }
 
-  // Build the prompt with stock context
   const prompt = buildAnalysisPrompt(stock, scores);
 
   try {
@@ -37,19 +74,20 @@ export async function generateGrokExplanation(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
+        Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
         model: GROQ_MODEL,
         messages: [
           {
             role: 'system',
-            content: 'You are an expert financial analyst specializing in Sri Lankan stock market analysis. Provide clear, data-driven insights for long-term investors. Always respond with valid JSON only, no additional text.'
+            content:
+              'You are an expert financial analyst specializing in Sri Lankan stock market analysis. Provide clear, data-driven insights for long-term investors. Always respond with valid JSON only, no additional text.',
           },
           {
             role: 'user',
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.7,
         max_tokens: 1500,
@@ -59,6 +97,13 @@ export async function generateGrokExplanation(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Groq API error for ${stock.symbol}:`, response.status, errorText);
+      if (cacheClient) {
+        const stale = await cacheClient.get(cacheKey, { allowStale: true });
+        if (stale) {
+          logCacheEvent('CACHE_FALLBACK_STALE', { key: cacheKey, type: 'ai_analysis' });
+          return stale.value as AIExplanation;
+        }
+      }
       return null;
     }
 
@@ -67,34 +112,66 @@ export async function generateGrokExplanation(
 
     if (!content) {
       console.error(`No content in Groq response for ${stock.symbol}`);
+      if (cacheClient) {
+        const stale = await cacheClient.get(cacheKey, { allowStale: true });
+        if (stale) {
+          logCacheEvent('CACHE_FALLBACK_STALE', { key: cacheKey, type: 'ai_analysis' });
+          return stale.value as AIExplanation;
+        }
+      }
       return null;
     }
 
-    // Parse the JSON response
     const parsed = parseGroqResponse(content);
 
     if (!parsed) {
       console.error(`Failed to parse Groq response for ${stock.symbol}`);
+      if (cacheClient) {
+        const stale = await cacheClient.get(cacheKey, { allowStale: true });
+        if (stale) {
+          logCacheEvent('CACHE_FALLBACK_STALE', { key: cacheKey, type: 'ai_analysis' });
+          return stale.value as AIExplanation;
+        }
+      }
       return null;
     }
 
-    // Add generation timestamp
-    return {
+    const explanation: AIExplanation = {
       ...parsed,
       generatedAt: Date.now(),
     };
 
+    if (cacheClient) {
+      await cacheClient.set(cacheKey, explanation, ttl, 'ai_analysis', {
+        symbol: stock.symbol,
+        tier,
+        tierScore,
+      });
+    }
+
+    return explanation;
   } catch (error) {
     console.error(`Error calling Groq API for ${stock.symbol}:`, error);
+    if (cacheClient) {
+      const stale = await cacheClient.get(cacheKey, { allowStale: true });
+      if (stale) {
+        logCacheEvent('CACHE_FALLBACK_STALE', { key: cacheKey, type: 'ai_analysis' });
+        return stale.value as AIExplanation;
+      }
+    }
     return null;
   }
 }
 
-/**
- * Build a detailed prompt for Grok API
- */
 function buildAnalysisPrompt(stock: StockData, scores: StockScores): string {
-  const { veryLongTermScore, longTermScore, shortTermScore, veryLongTermFactors, longTermFactors, shortTermFactors } = scores;
+  const {
+    veryLongTermScore,
+    longTermScore,
+    shortTermScore,
+    veryLongTermFactors,
+    longTermFactors,
+    shortTermFactors,
+  } = scores;
 
   return `Analyze this Sri Lankan stock for long-term investment:
 
@@ -147,15 +224,10 @@ function buildAnalysisPrompt(stock: StockData, scores: StockScores): string {
 }`;
 }
 
-/**
- * Parse Groq's JSON response
- */
 function parseGroqResponse(content: string): Omit<AIExplanation, 'generatedAt'> | null {
   try {
-    // Try to extract JSON from markdown code blocks if present
     let jsonString = content.trim();
 
-    // Remove markdown code fences if present
     if (jsonString.startsWith('```json')) {
       jsonString = jsonString.replace(/^```json\n/, '').replace(/\n```$/, '');
     } else if (jsonString.startsWith('```')) {
@@ -164,7 +236,6 @@ function parseGroqResponse(content: string): Omit<AIExplanation, 'generatedAt'> 
 
     const parsed = JSON.parse(jsonString);
 
-    // Validate required fields
     if (!parsed.summary || !parsed.longTermAnalysis || !parsed.shortTermAnalysis) {
       return null;
     }
@@ -193,32 +264,28 @@ function parseGroqResponse(content: string): Omit<AIExplanation, 'generatedAt'> 
   }
 }
 
-/**
- * Batch generate explanations for multiple stocks
- * Processes sequentially to respect rate limits
- */
 export async function batchGenerateExplanations(
   stocksWithScores: Array<{ stock: StockData; scores: StockScores }>,
-  apiKey?: string
+  apiKey?: string,
+  options?: GrokGenerationOptions
 ): Promise<Map<string, AIExplanation>> {
   const results = new Map<string, AIExplanation>();
 
-  console.log(`\n🤖 Generating AI explanations for ${stocksWithScores.length} Long-Term Picks...\n`);
+  console.log(`\n🤖 Generating AI explanations for ${stocksWithScores.length} picks...\n`);
 
   for (const { stock, scores } of stocksWithScores) {
     console.log(`   Analyzing ${stock.symbol}...`);
 
-    const explanation = await generateGrokExplanation(stock, scores, apiKey);
+    const explanation = await generateGrokExplanation(stock, scores, apiKey, options);
 
     if (explanation) {
       results.set(stock.symbol, explanation);
-      console.log(`   ✅ ${stock.symbol} - AI analysis generated`);
+      console.log(`   ✅ ${stock.symbol} - AI analysis ready`);
     } else {
       console.log(`   ⚠️  ${stock.symbol} - AI generation failed, will use template`);
     }
 
-    // Add a small delay to respect rate limits (500ms between requests)
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   console.log(`\n✅ Generated ${results.size}/${stocksWithScores.length} AI explanations\n`);

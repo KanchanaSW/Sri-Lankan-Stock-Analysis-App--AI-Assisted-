@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { StockWithScores } from '@/lib/types'
 import RiskIndicator from './RiskIndicator'
+import { formatRelativeTime } from '@/lib/formatRelativeTime'
 
 interface StockCardProps {
   stock: StockWithScores
@@ -94,9 +95,16 @@ export default function StockCard({ stock, type, showExplanation = false, index 
             
             <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-800">
               <span className="text-sm text-gray-500 dark:text-gray-400">{stock.sector}</span>
-              <span className={`text-sm font-medium ${stock.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {stock.priceChange >= 0 ? '+' : ''}{stock.priceChange.toFixed(2)}%
-              </span>
+              <div className="text-right">
+                <span className={`text-sm font-medium block ${stock.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {stock.priceChange >= 0 ? '+' : ''}{stock.priceChange.toFixed(2)}%
+                </span>
+                {stock.updatedAt && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {formatRelativeTime(stock.updatedAt)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

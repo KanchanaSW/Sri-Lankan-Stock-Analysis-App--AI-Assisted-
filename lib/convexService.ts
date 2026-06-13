@@ -30,7 +30,7 @@ type ConvexStock = Doc<"stocks"> & {
  */
 function transformConvexStock(stock: ConvexStock, index: number): StockData {
   return {
-    id: (index + 1).toString(), // Use index-based ID for backward compatibility
+    id: (index + 1).toString(),
     symbol: stock.symbol,
     name: stock.name,
     sector: stock.sector,
@@ -39,6 +39,7 @@ function transformConvexStock(stock: ConvexStock, index: number): StockData {
     priceChange: stock.priceChange,
     weekHigh52: stock.weekHigh52,
     weekLow52: stock.weekLow52,
+    updatedAt: stock.updatedAt,
     historicalData: stock.historicalData.map((ohlc): OHLCData => ({
       date: ohlc.date,
       open: ohlc.open,

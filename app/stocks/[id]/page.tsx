@@ -10,6 +10,7 @@ import VolumeChart from '@/components/charts/VolumeChart'
 import LoadingSkeleton from '@/components/LoadingSkeleton'
 import { useStockById } from '@/lib/convexService'
 import { formatMarketCap } from '@/lib/stockService'
+import { formatRelativeTime, formatAiGeneratedTime } from '@/lib/formatRelativeTime'
 
 const pageVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -129,6 +130,11 @@ export default function StockDetailPage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   52W: Rs. {stock.weekLow52.toFixed(2)} - Rs. {stock.weekHigh52.toFixed(2)}
                 </p>
+                {stock.updatedAt && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    {formatRelativeTime(stock.updatedAt)}
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -207,6 +213,11 @@ export default function StockDetailPage() {
             viewport={{ once: true, amount: 0.15 }}
           >
             <h3 className="mb-3 text-blue-900 dark:text-blue-300">AI-Assisted Analysis</h3>
+            {explanation.generatedAt && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {formatAiGeneratedTime(explanation.generatedAt)}
+              </p>
+            )}
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Summary</h4>

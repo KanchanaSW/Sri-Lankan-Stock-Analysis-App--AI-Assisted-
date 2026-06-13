@@ -1,5 +1,5 @@
 import { cronJobs } from "convex/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const crons = cronJobs();
 
@@ -38,6 +38,16 @@ crons.weekly(
     },
     api.scraper.runScrape,
     { tier: "very-long-term" }
+);
+
+/**
+ * CACHE CLEANUP
+ * Remove expired cache entries once per day at 02:00 UTC (7:30 AM LKT)
+ */
+crons.daily(
+    "clear-expired-cache",
+    { hourUTC: 2, minuteUTC: 0 },
+    internal.cache.clearExpiredCacheInternal
 );
 
 export default crons;

@@ -11,6 +11,7 @@ import {
   getTopShortTermStocksClient,
   getTopVeryLongTermStocksClient
 } from '@/lib/convexService'
+import { formatMarketRefreshTime } from '@/lib/formatRelativeTime'
 
 const sectionVariants: Variants = {
   hidden: { opacity: 0, y: 40 },
@@ -107,7 +108,9 @@ export default function Home() {
               )}
             </motion.div>
           </motion.div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Last updated: {overview?.lastUpdated ?? 'N/A'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+            {formatMarketRefreshTime(overview?.lastUpdated ?? 'N/A')}
+          </p>
         </div>
       </motion.section>
 

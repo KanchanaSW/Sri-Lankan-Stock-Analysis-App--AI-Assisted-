@@ -86,4 +86,18 @@ export default defineSchema({
     totalVolume: v.string(),
     lastUpdated: v.string(),
   }),
+
+  // TTL cache table - compute cache for API/CPU-heavy operations
+  cacheEntries: defineTable({
+    key: v.string(),
+    value: v.any(),
+    type: v.string(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_key", ["key"])
+    .index("by_type", ["type"])
+    .index("by_expiresAt", ["expiresAt"]),
 });
